@@ -63,12 +63,12 @@ In what follows we will talk about formal verfication using {\bf Coq proof assis
 \section{Coq mini-intro}
 
 \begin{frame}{Coq mini-intro}
-  As a formal language we choose {\it Gallina}, mechanized version of {\bf Calculus of Inductive Constructions}, which is a very expressive type theory well studied in mathematical logic. We write the specifications, model our programs and do the proofs in this language.
+  As a formal language we choose {\it Gallina}, a mechanized version of {\bf Calculus of Inductive Constructions}, which is a very expressive type theory well studied in mathematical logic. We write the specifications, model our programs and do the proofs in this language.
 
   \smallskip
 We could do all of the above on paper, but it would quickly get out of hand. Moreover, we want to be sure that there are no mistakes in the proofs.
   
-  So we use a tool called {\bf proof assistant}: a program that checks that your proof is correct. It also provides an environment to make the construction of proofs easier. In particular, we will talk about Coq proof assistant: \url{https://coq.inria.fr/}.
+  So we use a tool called {\bf proof assistant}: a program that checks that your proof is correct. It also provides an environment to make the construction of proofs easier. In particular, we will talk about the Coq proof assistant: \url{https://coq.inria.fr/}.
   
   
 \end{frame}
@@ -79,7 +79,7 @@ We could do all of the above on paper, but it would quickly get out of hand. Mor
   
     \item define functions and predicates
    \item state mathematical theorems and software specifications
-    \item interactively develop formal proofs of these theorems
+    \item interactively develop formal proofs of theorems
    \item machine-check these proofs by a relatively small certification kernel
     \item extract certified programs to languages like OCaml, Haskell or Scheme.
   \end{itemize}
@@ -90,7 +90,7 @@ We could do all of the above on paper, but it would quickly get out of hand. Mor
 
 \begin{frame}[fragile]{Inductive definitions}
 
-  In Coq everything is either a {\it term} or a {\it type}. You can define basic inductive types using \texttt{Inductive} command.
+  In Coq everything is either a {\it term} or a {\it type}. You can define basic inductive types using the \texttt{Inductive} command.
 
   \begin{lstlisting}[language=Coq]
   Inductive bool : Set :=
@@ -99,7 +99,7 @@ We could do all of the above on paper, but it would quickly get out of hand. Mor
 
   \end{lstlisting}
 
-  Boolean type has two {\bf constructors}: \texttt{true} and \texttt{false}.  
+  The boolean type has two {\bf constructors}: \texttt{true} and \texttt{false}.  
   
    \begin{lstlisting}[language=Coq]
   Inductive nat : Set :=
@@ -107,12 +107,12 @@ We could do all of the above on paper, but it would quickly get out of hand. Mor
     | S : nat -> nat.  
    \end{lstlisting}
 
-   Natural numbers is defined by two constructors as well: \texttt{O} (zero) and \texttt{S} (successor function). Any {\it term} of type $\mathbb{N}$ is constructed using these two. E.g., \texttt{S O} : $\mathbb{N}$, \texttt{S (S O)} : $\mathbb{N}$, \texttt{S (S (S O))} : $\mathbb{N}$  \ldots
+   Natural numbers are defined by two constructors as well: \texttt{O} (zero) and \texttt{S} (successor function). Any {\it term} of type $\mathbb{N}$ is constructed using these two. E.g., \texttt{S O} : $\mathbb{N}$, \texttt{S (S O)} : $\mathbb{N}$, \texttt{S (S (S O))} : $\mathbb{N}$  \ldots
 \end{frame}
 
 \begin{frame}[fragile]{Recursive definitions}
 
-  You can define recursive functions using \texttt{Fixpoint} command.
+  You can define recursive functions using the \texttt{Fixpoint} command.
 
   Since we know that by construction any term of type $\mathbb{N}$ is either \texttt{O} or \texttt{S n} for some $n : \mathbb{N}$, we can use {\it pattern-matching}.
   
@@ -124,7 +124,7 @@ We could do all of the above on paper, but it would quickly get out of hand. Mor
   end
    \end{lstlisting}
    
-Note: Coq only accepts the definitions that terminate\footnote{This limitation is needed to ensure consistency of the system, as well as decidability of type-checking.}. Here we are recursing on a direct subterm of \texttt{(S p)} thus we are guaranteed to terminate and Coq is able to automatically assure this. Sometimes you have to do a termination proof by hand. 
+Note: Coq only accepts definitions that terminate\footnote{This limitation is needed to ensure consistency of the system, as well as decidability of type-checking.}. Here we are recursing on a direct subterm of $n$ thus we are guaranteed to terminate and Coq is able to automatically ensure this. Sometimes you have to do a termination proof by hand. 
 \end{frame}
 
 
@@ -156,7 +156,7 @@ Theorem plus_2_3 : (S (S O)) + (S (S (S O))) = (S (S (S (S (S O))))).
 \begin{theorem} $\forall n \; (0 + n = n)$.
 \end{theorem}
 
-To prove this we also use the definition of addition: since the recurion is on the first term, we are in the base case.
+To prove this we also use the definition of addition: since the recursion is on the first term, we are in the base case.
 
    \begin{lstlisting}[language=Coq]
   Fixpoint plus (n m : nat) : nat :=
@@ -201,7 +201,7 @@ To prove this we also use the definition of addition: since the recurion is on t
   \end{lstlisting}
 \end{frame}
 \begin{frame}{More Proofs}
-     In Coq you have to justify every step of the proof and the \texttt{Qed} command only succeeds on correct proofs. But you don't have to do every proof from scratch, since there are extensive libraries covering lemmas about basic mathematics as well several decision procedures that automatize proof search.
+     In Coq you have to justify every step of the proof and the \texttt{Qed} command only succeeds on correct proofs. But you don't have to do every proof from scratch, since there are extensive libraries covering lemmas about basic mathematics as well as several decision procedures that automatize proof search.
      \begin{itemize}
      \item Using SMT and SAT solvers: \url{https://smtcoq.github.io/}
      \item First-order decision procedures (CoqHammer): \url{https://github.com/lukaszcz/coqhammer}
@@ -221,7 +221,7 @@ To prove this we also use the definition of addition: since the recurion is on t
    \begin{frame}{Curry-Howard Isomorphism (CHI)}
      We said that {\it ``Curry-Howard isomorphism is a correspondence between programs and terms on one hand and proofs and types on the other''}. To make this precise, we need to specify what kind of programs we have on one side and what kind of proofs (that is, what kind of logic) we have on the other side.
 
-     Various {\bf lambda calculi} were designed to describe programs, that is, computation: {\it untyped lambda-calculus, simply-typed lambda calculus, polymorphic lambda-calculus, G\"{o}del's system {\bf T}, system {\bf F}} etc\footnote{cf. Lectures on Curry-Howard Isomorphism \cite{Sørensen98lectureson}}. If you never heard of them, think of functional programming languages as {\bf OCaml} and {\bf Haskell}, they implement certain lambda calculi. 
+     Various {\bf lambda calculi} were designed to describe programs, that is, computation: {\it untyped lambda-calculus, simply-typed lambda calculus, polymorphic lambda-calculus, G\"{o}del's system {\bf T}, system {\bf F}} etc\footnote{cf. Lectures on Curry-Howard Isomorphism \cite{Sørensen98lectureson}}. If you never heard of them, think of functional programming languages such as {\bf OCaml} and {\bf Haskell}, they implement certain lambda calculi. 
      
 \end{frame}
 \begin{frame}{The simplest CHI: simply typed lambda calculus}
@@ -231,11 +231,11 @@ To prove this we also use the definition of addition: since the recurion is on t
      \item[Abs] $(\lambda x.M)$, if $x$ a variable and $M$ is a term 
      \item[App] $(M N)$, if $M$ and $N$ are terms
      \end{description}
-     Think of $(\lambda x.M)$ as a function with argument $x$ and body $M$ and of $(M N)$ as applying function $M$ to the argument $N$. This is formalized by introducing $\beta$-{\it reduction} relation on terms:
-     \[ (\lambda x.M)N \Rightarrow_\beta M[x := N]\footnote{Meaning substitute all occurences of x in M by N.} \] 
-Some examples of $\beta$-reduction: 
-     \[ (\lambda x.x)y \Rightarrow_\beta y \]
-     \[ ((\lambda x.(x z)) y \Rightarrow_\beta (y z) \]
+     Think of $(\lambda x.M)$ as a function with argument $x$ and body $M$ and of $(M N)$ as applying function $M$ to the argument $N$. %This is formalized by introducing $\beta$-{\it reduction} relation on terms:
+     %\[ (\lambda x.M)N \Rightarrow_\beta M[x := N]\footnote{Meaning substitute all occurences of x in M by N.} \] 
+%Some examples of $\beta$-reduction: 
+ %    \[ (\lambda x.x)y \Rightarrow_\beta y \]
+  %   \[ ((\lambda x.(x z)) y \Rightarrow_\beta (y z) \]
 
 \end{frame}
 \begin{frame}{Simply typed lambda calculus}
@@ -246,7 +246,7 @@ Some examples of $\beta$-reduction:
 
      $\lambda x.x$ (identity function)
      
-     $\lambda x.\lambda y. x$ (true)
+     $\lambda x.\lambda y. x$ (true\footnote{By convention: you could define constants in a different way as well.})
 
      $\lambda x.\lambda y. y$ (false or zero)
 
@@ -296,9 +296,9 @@ A more complex example:
          \end{prooftree}
 \end{frame}
 \begin{frame}{Back to CHI}
-         So we made more precise what we have on one side of the Curry-Howard correspondence: simply typed lambda calculus, which corresponds to some rudimenatry functional programming language. Now: what does it correspond to and how?
+         We made one side of the Curry-Howard correspondence more precise: the simply typed lambda calculus, which corresponds to some rudimenatry functional programming language. Now: what does it correspond to and how?
 
-         In general programs, or computations, will correspond to certain kind of logics. Namely, {\bf intuitionistic logics}. These logics were created to formalize what is called constructive mathematics: that is, mathematics in which we are only interested in objects that can be effectively constructed.
+         In general programs (or computations) will correspond to certain kind of logics. Namely, {\bf intuitionistic logics}. These logics were created to formalize what is called constructive mathematics: that is, mathematics in which we are only interested in objects that can be effectively constructed.
 \end{frame}
    
 \begin{frame}{Implicational propositional logic}
@@ -333,34 +333,27 @@ A more complex example:
        You may notice a parallelism between the rules of inference of {\bf Impl} and typing rules of simply typed lambda-calculus, this is the core of Curry-Howard Isomorphism.
 
 \begin{multicols}{2}
+
           \begin{prooftree}
           \AxiomC{$\Gamma,  \phi \vdash \phi $ ({\bf Ax})}     
                  \end{prooftree}
-
-         \begin{prooftree}
-           \AxiomC{$\Gamma \vdash \phi \rightarrow \psi$}
-           \AxiomC{$\Gamma \vdash \phi$}
-            \RightLabel{($\rightarrow$-E)}
-           \BinaryInfC{$\Gamma \vdash \psi$}
+                 
+                  \begin{prooftree}
+          \AxiomC{$\Gamma, x : \tau \vdash x : \tau $ ({\bf Ax})}     
          \end{prooftree}
 
+                 \end{multicols}
+
+         
+\begin{multicols}{2}
 \begin{prooftree}
            \AxiomC{$\Gamma, \phi \vdash \psi$}
                       \RightLabel{($\rightarrow$-I)}
            \UnaryInfC{$\Gamma \vdash \phi \rightarrow \psi$}
          \end{prooftree}
 
-\bigskip    
-         \begin{prooftree}
-          \AxiomC{$\Gamma, x : \tau \vdash x : \tau $ ({\bf Ax})}     
-         \end{prooftree}
 
-          \begin{prooftree}
-           \AxiomC{$\Gamma \vdash M : \sigma \rightarrow \tau$}
-           \AxiomC{$\Gamma \vdash N : \sigma$}
-           \RightLabel{({\bf App})}
-           \BinaryInfC{$\Gamma \vdash (M N) : \tau$}
-         \end{prooftree}
+         
 
          \begin{prooftree}
            \AxiomC{$\Gamma, x : \sigma \vdash M : \tau$}
@@ -370,6 +363,24 @@ A more complex example:
 
         
 \end{multicols}
+
+\begin{multicols}{2}
+
+\begin{prooftree}
+
+           \AxiomC{$\Gamma \vdash \phi \rightarrow \psi$}
+           \AxiomC{$\Gamma \vdash \phi$}
+            \RightLabel{($\rightarrow$-E)}
+           \BinaryInfC{$\Gamma \vdash \psi$}
+         \end{prooftree}
+ \begin{prooftree}
+           \AxiomC{$\Gamma \vdash M : \sigma \rightarrow \tau$}
+           \AxiomC{$\Gamma \vdash N : \sigma$}
+           \RightLabel{({\bf App})}
+           \BinaryInfC{$\Gamma \vdash (M N) : \tau$}
+         \end{prooftree}
+         
+         \end{multicols}
 
 \end{frame}
 \begin{frame}{Curry-Howard Isomorphism}
@@ -390,7 +401,7 @@ A more complex example:
 \begin{frame}{Curry-Howard Isomorphism}
              You've seen the simplest type theory and propositional logic and how Curry-Howard Isomorphism works.
     
-             Now you can expand {\bf ST} to include more terms and types (you can allow sum and product types, polymorphism, recursors - which allows you to formulate more functions) or alternatively expand the logic to be more expressible and complex (add other
+             Now we can expand {\bf ST} to include more terms and types (you can allow sum and product types, polymorphism, recursors - which allows you to formulate more functions) or alternatively expand the logic to be more expressible and complex (add other
              connectives, quantifiers, inductive definitions etc).
     
              But the principle stays the same and you have Curry-Howard Isomorphism for very complex type systems, such as Calculus of Inductive Constructions, on which Coq is based. 
@@ -467,7 +478,7 @@ A more complex example:
 
 \end{frame}
 \begin{frame}{Coq's kernel}
-  Since the logic we are dealing with is more complex that {\bf Impl} the functional programs corresponding to these types are also way more complex. However, checking whether a given term $t$ has a given type $\sigma$ is a decidable problem even for Calculus of Inductive Constructions. By Curry-Howard Isomorphism, this also yields a procedure for checking the correctness of proofs written in Coq's logic.  This algorithm constitutes Coq's trusted {\bf kernel}.
+  Since the logic we are dealing with is more complex than {\bf Impl}, the functional programs corresponding to these types are also way more complex. However, checking whether a given term $t$ has a given type $\sigma$ is a decidable problem even for Calculus of Inductive Constructions. By Curry-Howard Isomorphism, this also yields a procedure for checking the correctness of proofs written in Coq's logic.  This algorithm constitutes Coq's trusted {\bf kernel}.
 
 \end{frame}
 
@@ -478,7 +489,7 @@ A more complex example:
 \section{Verifying C code: a motivating example}
 
 \begin{frame}{\texttt{asn\_strtoimax\_lim} of ASN.1C compiler}
-  At \url{Digamma.ai} we are working on formal verification of existing {\bf imperative} programs using Coq. We took a function \texttt{asn\_strtoimax\_lim} from \texttt{asn1c} compiler to test our approach on a simple real-life function.
+  At \url{Digamma.ai} we are working on formal verification of existing {\bf imperative} programs using Coq. We took a function \texttt{asn\_strtoimax\_lim} from \texttt{asn1c} compiler to test our approach on a simple real-life example.
   
 
   Informal specification from the comments: 
@@ -493,7 +504,7 @@ A more complex example:
 
 \begin{frame}{\texttt{asn\_strtoimax\_lim} code}
   
-  {\fontsize{3}{1}\selectfont  \lstinputlisting[language=C]{asn_strtoimax_lim_old.c}}
+  {\fontsize{4}{1}\selectfont  \lstinputlisting[language=C]{asn_strtoimax_lim_old.c}}
   
 \end{frame}
 
@@ -543,7 +554,43 @@ ASN\_STRTOX\_OK
 
 \begin{frame}{Memory store bug}
 
-    Yaroslav
+    Consider a case where:
+    
+    The minimal signed int \texttt{MIN\_INT} = $-4775808$ 
+
+    \texttt{str} points to a list of ASCII characters [2d 34 37 37 35 38 30 31 31 31]
+
+    (which stands for ``-477580111'') \\
+
+    Assume that $*end = 0x30313131$: [2d 34 37 37 35 38 \overbrace{30 \; 31 \; 31 \; 31}^{\texttt{*end}}]
+
+    Assume that we read $1$ at address $str = 0x21212126$
+
+    
+    [2d 34 37 37 35 38 30 \overbrace{31}^{\texttt{str}} 31 31]
+    
+    Since the next char is a digit, the program should output \texttt{ASN\_ERROR\_RANGE}.
+
+  \end{frame}
+  \begin{frame}[fragile]{Memory store bug}
+
+
+    \begin{lstlisting}[language=C]
+  if(str < *end) {
+    *end = str;
+    if(*str >= 0x30 && *str <= 0x39)
+    { return ASN_STRTOX_ERROR_RANGE;
+    } else { *intp = sign * value;
+             return ASN_STRTOX_EXTRA_DATA; }}
+  \end{lstlisting}
+    
+    However: we have \texttt{*end = str} before checking next char, so we overwrite the last four digits and get a new string:
+    
+    [2d 34 37 37 35 38 \overbrace{21 \; 21 \; 21 \; 26}^{\texttt{*end}} ]
+
+    (which stands for $``-477580!!!\&''$)
+
+    so the output is \texttt{ASN\_EXTRA\_DATA}.
   
 \end{frame}
 
