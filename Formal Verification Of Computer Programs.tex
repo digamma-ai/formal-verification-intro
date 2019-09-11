@@ -92,7 +92,7 @@ In what follows we will talk about formal verfication using {\bf Coq proof assis
   
 \end{frame}
 
-\begin{frame}{\texttt{asn\_strtoimax\_lim}}
+\begin{frame}{Negative error range bug}
 
 When we go beyond allowed int range, a false result is given on some inputs:  
 
@@ -113,6 +113,13 @@ ASN\_STRTOX\_OK
 
 
 \end{frame}
+
+\begin{frame}{Negative error range bug}
+    This happens whenever the input string represents a number smaller than \texttt{MIN\_INT}, due to the fact that absolute value of \texttt{MIN\_INT} is greater than \texttt{MAX\_INT}, thus negative number cannot be treated as value * sign. 
+    
+    Formal proof has to cover all cases, hence this bug became obvious during the proof.
+    
+\end{frame}{}
 
 \begin{frame}{\texttt{asn\_strtoimax\_lim} fixed}
   
@@ -195,7 +202,8 @@ ASN\_STRTOX\_OK
 
 
 \begin{frame}{\texttt{asn\_strtoimax\_lim}}
-
+   This configuration may happen only on some hardware architectures and almost impossible to reproduce. Yet, the vulnerability is there and posses a potential problem.
+   
   This code has been extensively tested and used for 15 years. Formal verification guarantees absence of these kind of bugs.
 
   
@@ -363,11 +371,12 @@ To prove this we also use the definition of addition: since the recursion is on 
    \begin{frame}{Curry-Howard Isomorphism (CHI)}
      We said that {\it ``Curry-Howard isomorphism is a correspondence between programs and terms on one hand and proofs and types on the other''}. To make this precise, we need to specify what kind of programs we have on one side and what kind of proofs (that is, what kind of logic) we have on the other side.
 
-     Various {\bf lambda calculi} were designed to describe programs, that is, computation: {\it untyped lambda-calculus, simply-typed lambda calculus, polymorphic lambda-calculus, G\"{o}del's system {\bf T}, system {\bf F}} etc\footnote{cf. Lectures on Curry-Howard Isomorphism \cite{Sørensen98lectureson}}. If you never heard of them, think of functional programming languages such as {\bf OCaml} and {\bf Haskell}, they implement certain lambda calculi. 
+     Various {\bf lambda calculi} were designed to describe programs.% {\it untyped lambda-calculus, simply-typed lambda calculus, polymorphic lambda-calculus, G\"{o}del's system {\bf T}, system {\bf F}} etc\footnote{cf. Lectures on Curry-Howard Isomorphism \cite{Sørensen98lectureson}}.
+     If you never heard of lambda calculi, think of functional programming languages such as {\bf OCaml} and {\bf Haskell}.
      
 \end{frame}
 \begin{frame}{The simplest CHI: simply typed lambda calculus}
-    Consider the simplest example of typed lambda calculus: simply typed lambda calculus {\bf ST}. Terms of {\bf ST} are:
+    Consider the simplest example of typed lambda calculus\footnote{Or a rudimentary functional programming language.}: simply typed lambda calculus {\bf ST}. Terms of {\bf ST} are:
      \begin{description}
      \item[Var] variables
      \item[Abs] $(\lambda x.M)$, if $x$ a variable and $M$ is a term 
@@ -398,7 +407,7 @@ To prove this we also use the definition of addition: since the recursion is on 
        We are interested in a {\bf typed} lambda calculus. The types of {\bf ST} are:
         \begin{description}
      \item[Var] type variables 
-     \item[Arr] $\tau \rightarrow \sigma$, if $\tau$ and $\sigma$ are types
+     \item[Arrow] $\tau \rightarrow \sigma$, if $\tau$ and $\sigma$ are types
        \end{description}
        Types are assigned to terms according to certain rules. Let $\Gamma$ be a set of simply-typed terms (also called context). 
        \begin{prooftree}
@@ -419,13 +428,26 @@ To prove this we also use the definition of addition: since the recursion is on 
          \end{prooftree}
 \end{frame}
 \begin{frame}{Simply typed lambda-calculus}
-         Here is a simple derivation that shows that the term $\lambda x. x$ has type $\sigma \rightarrow \sigma$, with $\sigma$ being any type of {\bf ST}: \begin{prooftree}
+         Here is a simple derivation that shows that the term $\lambda x. x$ (identity) has type $\sigma \rightarrow \sigma$, with $\sigma$ being any type of {\bf ST}: \begin{prooftree}
           \AxiomC{$ x : \sigma \vdash x : \sigma$ ({\bf Ax})}
           \RightLabel{({\bf Abs})}
            \UnaryInfC{$\vdash (\lambda x. x) : \sigma \rightarrow \sigma$}
          \end{prooftree}
 
-A more complex example:             
+And if you apply identity to a term of type $\sigma$, the output is also of type $\sigma$:
+
+\begin{prooftree}
+          \AxiomC{$ y : \sigma, x : \sigma \vdash x : \sigma$ ({\bf Ax})}
+          \RightLabel{({\bf Abs})}
+           \UnaryInfC{$y : \sigma, \vdash (\lambda x. x) : \sigma \rightarrow \sigma$}
+           \AxiomC{ $y : \sigma \vdash y : \sigma$ ({\bf Ax})}
+           \RightLabel{({\bf App})}
+           \BinaryInfC{ $y : \sigma \vdash ((\lambda x. x) y) : \sigma$}
+         \end{prooftree}
+         \end{frame}
+         
+\begin{frame}<0>
+A more complex example.         
           \begin{prooftree}
             \AxiomC{$y : \tau, x : \tau \rightarrow \sigma \vdash x : \tau \rightarrow\sigma$ ({\bf Ax})}
             \AxiomC{$y : \tau, x : \tau \rightarrow \sigma \vdash y : \tau$ ({\bf Ax}) }
@@ -566,9 +588,9 @@ A more complex example:
        \end{tabular}
 \end{frame}
        
-\begin{frame}[fragile]{Proofs as functional programs}
+\begin{frame}<0>[fragile]{Proofs as functional programs}
 
-  Let's return to our first proofs:
+  Let's return to one of our first proofs:
 
   \begin{lstlisting}[language=Coq]
     Theorem plus_O_n : (forall n, O + n = n).
@@ -592,31 +614,24 @@ A more complex example:
 \end{frame}
 
 \begin{frame}[fragile]{Proofs as functional programs}
-
-  The following proof has a more complex term:
-  
   \begin{lstlisting}[language=Coq]
     Theorem plus_n_O : (forall n, n + O = n).
     Proof.
       induction n; simpl.
-      (* base case *)
       - reflexivity.
-      (* inductive step *)
-      - rewrite IHn. (* here we apply induction hypothesis *)
+      - rewrite IHn. 
       reflexivity.
     Qed.
   \end{lstlisting}
-
-
+By Curry-Howard Isomorphism, the proof of this statement corresponds to constructing a term, that is, to writing a functional program.
   \begin{lstlisting}[language=Coq]
     plus_n_O = fun n : nat =>
                nat_ind (fun n0 : nat => n0 + O = n0) eq_refl
                (fun (n0 : nat) (IHn : n0 + O = n0) =>
-                       eq_ind_r (fun n1 : nat => S n1 = S n0) eq_refl IHn) n
+                eq_ind_r (fun n1 : nat => S n1 = S n0) eq_refl IHn) n
     : forall n : nat, n + O = n
   \end{lstlisting}
-  
-  where \texttt{nat\_ind} is a term with type that corresponds to induction on natural numbers.
+  where \texttt{nat\_ind} is a term with type that corresponds to induction on natural numbers and \texttt{eq\_refl} being a term of type \texttt{x = x}.
 
 \end{frame}
 \begin{frame}{Coq's kernel}
@@ -624,8 +639,13 @@ A more complex example:
 
 \end{frame}
 
+\begin{frame}{Coq's architecture}
+    \includegraphics[width=9cm,height=7cm]{pictures/circ.eps}
+    \cite{SozeauPic}
+\end{frame}
+
 \begin{frame}
- Now we will see how Coq is used for veryfing programs in a bit.
+ Now we will see how Coq is used for verifying programs.
 \end{frame}
 
 
@@ -688,7 +708,7 @@ A more complex example:
 
 \begin{frame}{Factorial example: verifying a C program}
 
-    To be able to state theorems about C programs in Coq you need to embed the language into Coq, meaning model its syntax (as abstract syntax trees) and semantics (modelling execution of programs) in Coq.
+    To be able to state theorems about C programs in Coq you need to embed the language into Coq, meaning model its syntax (as abstract syntax trees) and semantics (modelling execution of programs) in Coq\cite{Blazy09mechanizedsemantics}.
 
     Luckily, this has been already done in the project called CompCert, a verified compiler for C, almost entirely written in Coq and proved to work according to its specification (\url{http://compcert.inria.fr/}).
 
@@ -794,7 +814,7 @@ C function embedded in Coq as an abstract syntax tree:
   \begin{frame}[fragile]{Operational Semantics}
     We assign primitive values to constants and then compositionally compute values of expressions and outcomes of statements. The evaluation is done in the context of local environment and memory state.
    \begin{itemize}
-   \item Each syntactic element is related to the intended result of executing this element (new local environment, memory, outcome or value).
+   %\item Each syntactic element is related to the intended result of executing this element (new local environment, memory, outcome or value).
     
     \item Expressions are deterministically mapped to memory locations or values (integers, bool etc).
     \item The execution of statements depends on memory state and values stored in the local environment and produces {\bf outcomes} (break, normal, return), updated memory and local environment. Moreover, {\bf trace} of external calls is recorded.
@@ -871,12 +891,13 @@ A load succeeds if and only if the access is valid for reading. The value return
 \section{Other languages}
 
 \begin{frame}{Other languages}
- \begin{itemize}
-  \item \url{http://www.jscert.org/} JSCert: Certified JavaScript
-
-  \item RustBelt, Vellvm, CakeML
-  \item Krakatoa: A Java code certification tool that uses both Coq and Why to verify the soundness of implementations with regards to the specifications.
-  \end{itemize}
+ \begin{description}
+  \item[JSCert]: certified JavaScript.
+  \item[RustBelt]: formal (and machine-checked) safety proof for a language representing a realistic subset of Rust.
+  \item[Vellvm]: a framework for reasoning about programs expressed in LLVM's intermediate representation and transformations that operate on it.
+  \item[CakeML]: is a functional programming language and an ecosystem of proofs and tools built around the language. The ecosystem includes a proven-correct compiler that can bootstrap itself.
+  \item[Krakatoa]: A Java code certification tool that uses both Coq and Why to verify the soundness of implementations with regards to the specifications.
+  \end{description}
   \end{frame}
 
 \begin{frame}[allowframebreaks]{References}
