@@ -363,7 +363,7 @@ To prove this we also use the definition of addition: since the recursion is on 
 
    \section{How does Coq work?}
 \begin{frame}{How does Coq work?}
-    We can formalize programs, properties and proofs in the same language, as well as efficiently and reliably check proof correcteness due to the so-called {\bf Curry-Howard isomorphism}.
+    We can formalize programs, properties and proofs in the same language, as well as efficiently and reliably check proof correctness due to the so-called {\bf Curry-Howard isomorphism}.
 
     Curry-Howard isomorphism is a correspondence between programs and terms on one hand and proofs and types on the other. All logical statements in Coq are typing judgments and thus checking the correctness of proofs amounts to type checking. Let's see what it means precisely on a small example.
    \end{frame}
@@ -382,7 +382,7 @@ To prove this we also use the definition of addition: since the recursion is on 
      \item[Abs] $(\lambda x.M)$, if $x$ a variable and $M$ is a term 
      \item[App] $(M N)$, if $M$ and $N$ are terms
      \end{description}
-     Think of $(\lambda x.M)$ as a function with argument $x$ and body $M$ and of $(M N)$ as applying function $M$ to the argument $N$. %This is formalized by introducing $\beta$-{\it reduction} relation on terms:
+     Think of $(\lambda x.M)$ as a function with argument $x$ and body $M$ and of $(M N)$ as applying function $M$ to the argument $N$\footnote{For more details see \cite{Sørensen98lectureson}.}. %This is formalized by introducing $\beta$-{\it reduction} relation on terms:
      %\[ (\lambda x.M)N \Rightarrow_\beta M[x := N]\footnote{Meaning substitute all occurences of x in M by N.} \] 
 %Some examples of $\beta$-reduction: 
  %    \[ (\lambda x.x)y \Rightarrow_\beta y \]
@@ -654,8 +654,7 @@ By Curry-Howard Isomorphism, the proof of this statement corresponds to construc
 
 
 \begin{frame}[fragile]{Factorial example}
-  Mathematical specification of factorial is a recursive equation, for ($0 \leq n$):
-  \begin{align*}
+  Mathematical specification of factorial is a recursive equation, for ($0 \leq n$):\begin{align*}
   fact(0) &= 1 \\
   fact(n + 1) &= fact(n)*(n+1)    
   \end{align*}
@@ -700,7 +699,7 @@ By Curry-Howard Isomorphism, the proof of this statement corresponds to construc
 \begin{frame}{Factorial example: verifying a functional program}
   Now using Coq's extraction mechanism we can automatically extract an OCaml or Haskell function that is provably correct.
 
-  Alternatively, one could easily embed a functional language into Coq and reason about the existing implementation.
+  Alternatively, one could easily embed a functional language into Coq and reason about the existing implementation in a similar fashion.
 
   But what if you want to verify code written in imperative language? Things get \emph{slightly} more complicated.
 \end{frame}
@@ -708,9 +707,13 @@ By Curry-Howard Isomorphism, the proof of this statement corresponds to construc
 
 \begin{frame}{Factorial example: verifying a C program}
 
-    To be able to state theorems about C programs in Coq you need to embed the language into Coq, meaning model its syntax (as abstract syntax trees) and semantics (modelling execution of programs) in Coq\cite{Blazy09mechanizedsemantics}.
+    To be able to state theorems about C programs in Coq we need to somehow represent C functions in Coq. This means  to model C syntax (as abstract syntax trees) and semantics (execution of programs) in Coq\footnote{For formalization of C semantics see \cite{Blazy09mechanizedsemantics}}.
 
-    Luckily, this has been already done in the project called CompCert, a verified compiler for C, almost entirely written in Coq and proved to work according to its specification (\url{http://compcert.inria.fr/}).
+    Luckily, this has already been done in the project called CompCert.
+    \end{frame}
+    
+    \begin{frame}{CompCert}
+    CompCert is a verified compiler for C, almost entirely written in Coq and proved to work according to its specification (\url{http://compcert.inria.fr/}).
 
     \begin{quote}
       The striking thing about our CompCert results is that the middle-end bugs we found in all other compilers are absent. As of early 2011,the under-development version of CompCert is the only compiler we have tested for which Csmith cannot find wrong-code errors.
@@ -719,11 +722,11 @@ By Curry-Howard Isomorphism, the proof of this statement corresponds to construc
 \end{frame}
     
 \begin{frame}{Verifying imperative programs}
-    So using CompCert our approach is as follows:
+    We use CompCert and use the following approach to verifying C programs:
   \begin{itemize}
-  \item Parse C code into an abstract syntax tree using C light\footnote{C light is a subset of C} generator of CompCert
-  \item Write a functional specification using CompCert's model of C light 
-  \item Reason about the C light program using operational semantics defined in CompCert
+  \item Parse C code into a Coq abstract syntax tree using C light\footnote{C light is a subset of C} generator of CompCert
+  \item Write a functional specification in Coq, using CompCert's memory model and integer representations
+  \item Prove properties about the generated AST  using semantics of C (light) defined in CompCert
 \end{itemize}
 \end{frame}
 
@@ -744,7 +747,7 @@ unsigned int factorial (unsigned int input) {
 
 \end{lstlisting}
 
-The specification stays the same. 
+The specification stays the same.
 
 \end{frame}
 
@@ -755,17 +758,16 @@ C function embedded in Coq as an abstract syntax tree:
   (* int output = 1 *)
   (Sset _output (Econst_int (Int.repr 1) tuint)) 
   (Ssequence 
-    (Swhile 
-      (Etempvar _input tuint) (* while (input) *)
+    (* while (input) *)
+    (Swhile (Etempvar _input tuint) 
       (Ssequence  
+      (* output = output*input *)
         (Sset _output
           (Ebinop Omul (Etempvar _output tuint) 
-          (* output = output*input *)
           (Etempvar _input tuint) tuint)) 
-        (Sset _input
-          (Ebinop Osub (Etempvar _input tuint) 
           (* input = input - 1 *)
-          (Econst_int (Int.repr 1) tuint) tuint))))
+         (Sset _input (Ebinop Osub (Etempvar _input tuint) 
+                     (Econst_int (Int.repr 1) tuint) tuint))))
             (* return output *)
             (Sreturn (Some (Etempvar _output tuint))))).
           
@@ -774,22 +776,52 @@ C function embedded in Coq as an abstract syntax tree:
 \end{frame}
 
 
-
 \begin{frame}[fragile]{C light Expressions: Examples}
-
+  
+  Expressions are annotated with types: 
+  
   \begin{lstlisting}[language=Coq]
+    (* constant 0 of type int *)
     (* 0 *)
-    (Econst_int Int.zero tint) 
-
+    (Econst_int (Int.repr 0) tint) 
+     
+    (* binary operration add applied to constants 0 and 1 *)
     (* 0 + 1 *)
-    (Ebinop Oadd (Econst_int Int.zero tint)
+    (Ebinop Oadd (Econst_int (Int.repr 0) tint)
     (Econst_int (Int.repr 1) tint) (tint))
-
+    
+    (* temporary variable of integer pointer type *)
     (* int *p *)
     (Etempvar _p (tptr tint)) 
     
+    (* dereferencing integer pointer *)
     (* (*p) *)
     (Ederef (Etempvar _p (tptr tint)) tint)
+
+
+  \end{lstlisting}
+  
+\end{frame}
+
+\begin{frame}[fragile]{C light Statements: Examples}
+
+  \begin{lstlisting}[language=Coq]
+     (* int s = 1 *)
+      (Sset _s (Econst_int (Int.repr 1) tint))
+
+      (* return s *)
+      (Sreturn (Some (Etempvar _s tint)))
+      
+      (* int s = 1 ;
+         int t = 0 ; *)
+      (Ssequence 
+        (Sset _s (Econst_int (Int.repr 1) tint))
+        (Sset _t (Econst_int (Int.repr 0) tint)))
+       
+      (* while (s) { s = s - 1 } *)
+      (Swhile (Etempvar _s tint) 
+      (Sset _s (Ebinop Osub (Etempvar _input tint)
+                (Econst_int (Int.repr 1) tint) tint))))
 
 
   \end{lstlisting}
@@ -812,80 +844,94 @@ C function embedded in Coq as an abstract syntax tree:
   \end{frame}
   
   \begin{frame}[fragile]{Operational Semantics}
-    We assign primitive values to constants and then compositionally compute values of expressions and outcomes of statements. The evaluation is done in the context of local environment and memory state.
+    The idea is to assign primitive values to constants and then compositionally compute values of expressions and results of execution of statements. 
+    
+    The evaluation of expressions and execution of statements is done in the context of global and local environments and memory state.
    \begin{itemize}
    %\item Each syntactic element is related to the intended result of executing this element (new local environment, memory, outcome or value).
     
-    \item Expressions are deterministically mapped to memory locations or values (integers, bool etc).
-    \item The execution of statements depends on memory state and values stored in the local environment and produces {\bf outcomes} (break, normal, return), updated memory and local environment. Moreover, {\bf trace} of external calls is recorded.
+    \item Expressions are mapped to memory locations or values (integers, bool etc).
+    \item The execution of statements produces {\bf outcomes} (break, normal, return), updated memory and local environment. 
    \end{itemize}
 
 \end{frame}
 
 \begin{frame}{Examples}
-    \begin{itemize}
-      \item Expression \texttt{(Econst\_int Int.zero tint)} is evaluated to value \texttt{0} in any local environment and memory.
+     Expression  \texttt{(Econst\_int Int.zero tint)}   is evaluated to value \texttt{0} in any local environment and memory. 
+      \[ le, m , \texttt{(Econst\_int Int.zero tint)} \Rightarrow 0, le, m \]
 
-   \item Evaluation of statement \texttt{(Sset \_s (Econst\_int Int.zero tint))} in local environment $le$ and memory $m$ produces new local environment $le'$ with \texttt{\_s} mapped to value $0$ and a normal outcome.
+   Evaluation of statement \texttt{(Sset \_s (Econst\_int Int.zero tint))} in local environment $le$ and memory $m$ produces new local environment $le'$ with \texttt{\_s} mapped to value $0$ and a {\bf normal} outcome. 
+   \[ le, m, \texttt{(Sset \_s (Econst\_int Int.zero tint))} \Rightarrow le\{\_s = 0\}, m, \texttt{normal} \]
 
-   \item Statement \texttt{(Sreturn (Some (Etempvar \_s tint)))} evaluates to a return outcome and leaves $le$ and memory unchanged.
-
-     \end{itemize}
-
-    As you can see, in order to verify a program written in C, one has to have a good model of variable environments, integer and pointer arithmetics and memory model. 
+   Statement \texttt{(Sreturn (Some (Etempvar \_s tint)))} evaluates to a {\bf return}(\texttt{s}) outcome and leaves $le$ and memory unchanged.
+     \[ le, m,\texttt{(Sreturn (Some (Etempvar \_s tint)))}  \Rightarrow le, m, \texttt{return}(\texttt{s}) \]
+    
 
 \end{frame}
    
 \begin{frame}[fragile]{C memory model}
-
-    A memory model is a specification of memory states and operations over memory. In CompCert,
+   In order to verify a program written in C, one has to have a good model of variable environments, integer and pointer arithmetic and memory model. 
+   
+    A {\bf memory model} is a specification of memory states and operations over memory.
+    
+    In CompCert,
    memory states are accessed by addresses, pairs of a block
   identifier $b$ and a byte offset $ofs$ within that block.
-  Each address is associated to permissions (current and maximal): \texttt{Freeable, Writable, Readable, Nonempty, Empty}, ranging from allowing all operations to allowing no operation respectively.
+  Each address is associated to permissions ranging from allowing all operations (read, write etc.) to allowing no operation.
 \end{frame}
 
 
 \begin{frame}{C memory model}
   The type \texttt{mem} of memory states has  the following 4 basic operations over memory states:
   \bigskip
-  
-\begin{itemize}
-\item [load]: read a memory chunk at a given address;
-\item [store]: store a memory chunk at a given address;
+\begin{description}
+\item [load]: read memory at a given address;
+\item [store]: store memory at a given address;
 \item [alloc]: allocate a fresh memory block;
 \item [free]: invalidate a memory block.
-\end{itemize}
-\bigskip
-A load succeeds if and only if the access is valid for reading. The value returned by \texttt{load} belongs to the type of the memory quantity accessed etc. 
-
-
+\end{description}
+These operations are to satisfy some basic properties like:  \texttt{load} succeeds if and only if the access is valid for reading; the value returned by \texttt{load} belongs to the type of the memory quantity accessed etc. 
 
 \end{frame}
 
  \begin{frame}{Correctness statement}
-    Hence the correctness theorem for factorial would be of the following form:
+    Now we can state the correctness theorem for factorial:
+    
+    
    \begin{quote}
      For any memory $m$ and local environments $le$ with variables \texttt{input} assigned $n$ in $le$, execution of \texttt{f\_factorial} terminates and returns $fact(n)$ with resulting memory $m' = m$.
    \end{quote}
+   
+   \begin{theorem} \forall le \; m, 
+    
+    le\{\texttt{input = n}\} \rightarrow 
+    
+    \exists le', le, m, \texttt{factorial} \Rightarrow  le', m,  {\bf return}(\texttt{fact n})    
+    \end{theorem}
 
-   Hence we proved that factorial works correctly on all inputs\footnote{That do not lead to overflow.}.
+   Hence we proved that factorial works correctly on all inputs\footnote{For simplicity, here we also assume that (fact n) doesn't overflow}.
       
       \end{frame}
     
 
     
-    \begin{frame}
-      Go to factorial tutorial: \url{~/asn1verification/doc/tutorial/MiscExamples/factorial}
+    \begin{frame}<0>
+      To see the proof and more examples go to factorial tutorial: \url{~/asn1verification/doc/tutorial/MiscExamples/factorial}
     \end{frame}
 
     \begin{frame}{Conclusion}
 
       Coq can be used to prove correctness of imperative programs, as well as functional ones. However, the former requires an additional step of embedding C syntax and semantics in Coq. 
       
-      Going back to our first example:
-      
-      We wrote a formal specification of the function (based on the comment and analysis of the function), produced C light AST of the function using C light generator of CompCert and proved that the resulting AST evaluates to correct values on all valid inputs using operational semantics. Moreover, using CompCert's C memory model we can state properties about correct memory usage and heap and stack bounds.
-      
+      Going back to our first example of \texttt{asn\_strtoimax\_lim}:
+      \begin{itemize}
+          \item  We wrote a formal specification of the function (based on the comment and analysis of the function)
+          \item Then we produced C light AST of the function using C light generator of CompCert
+          \item And proved that the resulting AST evaluates to correct values on all valid inputs using operational semantics. 
+            \end{itemize}
+            
+            Moreover, using CompCert's C memory model we can state properties about correct memory usage and heap and stack bounds.
+
       \end{frame}
 
 \section{Other languages}
@@ -903,7 +949,7 @@ A load succeeds if and only if the access is valid for reading. The value return
 \begin{frame}[allowframebreaks]{References}
 
   \bibliography{demo}
-  \bibliographystyle{abbrv}
+  \bibliographystyle{apalike}
 
 \end{frame}
 
