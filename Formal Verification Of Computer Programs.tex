@@ -84,7 +84,7 @@ In what follows we will talk about formal verfication using {\bf Coq proof assis
 \end{frame}
 
 
-\begin{frame}{\texttt{asn\_strtoimax\_lim}}
+\begin{frame}{A bug uncovered during verification}
 
    During correctness proof, some proof obligations about the for loop were produced that could not be met, because of a bug in the function. Can you see it?
 
@@ -92,30 +92,31 @@ In what follows we will talk about formal verfication using {\bf Coq proof assis
   
 \end{frame}
 
-\begin{frame}{Negative error range bug}
+\begin{frame}{Negative range bug example}
 
-When we go beyond allowed int range, a false result is given on some inputs:  
+When we go beyond allowed \textit{int} range, a wrong result is given for some inputs:  
 
-input: -9223372036854775809 \\
-intmax: 9223372036854775807 \\
-upper boundary: 922337203685477580 \\
-last digit max: 7\\
-ASN\_STRTOX\_ERROR\_RANGE\\
-
-\bigskip
-
-input: -9223372036854775810 \\
-intmax: 9223372036854775807 \\
-upper boundary: 922337203685477580 \\ 
-last digit max: 7 \\
-output: 70 \\
-ASN\_STRTOX\_OK
-
+\begin{table}[]
+    \centering
+    \begin{tabular}{l|l}
+input & \texttt{-9223372036854775809} \\
+intmax & \texttt{\ 9223372036854775807}\\
+upper boundary& \texttt{\ 922337203685477580} \\
+last digit max& \texttt{\ 7}\\
+return & \color{green}\texttt{\ ASN\_STRTOX\_ERROR\_RANGE}\\
+\hline \\
+input & \texttt{-9223372036854775810} \\
+intmax & \texttt{\ 9223372036854775807}\\
+upper boundary& \texttt{\ 922337203685477580} \\
+last digit max& \texttt{\ 7}\\
+return & \color{red}\texttt{\ 70, ASN\_STRTOX\_OK}\\
+    \end{tabular}
+\end{table}
 
 \end{frame}
 
-\begin{frame}{Negative error range bug}
-    This happens whenever the input string represents a number smaller than \texttt{MIN\_INT}, due to the fact that absolute value of \texttt{MIN\_INT} is greater than \texttt{MAX\_INT}, thus negative number cannot be treated as value * sign. 
+\begin{frame}{Negative range bug}
+    This happens whenever the input string represents a number smaller than \texttt{MIN\_INT}, due to the fact that absolute value of \texttt{MIN\_INT} is greater than \texttt{MAX\_INT}, thus negative number cannot be treated as $\mathrm{value}\times\mathrm{sign}$ when $\mathrm{value}$ is represented as \textit{int}. 
     
     Formal proof has to cover all cases, hence this bug became obvious during the proof.
     
@@ -127,9 +128,10 @@ ASN\_STRTOX\_OK
 
 \end{frame}
   
-  \begin{frame}[fragile]{\texttt{asn\_strtoimax\_lim} fixed}
+\begin{frame}[fragile]{2nd bug uncovered in \emph{fixed} version}
 
     Is this fix OK? Look at this part of the code: 
+    \vskip
 
      \begin{lstlisting}[language=C]
   if(str < *end) {
@@ -145,7 +147,7 @@ ASN\_STRTOX\_OK
   
 \end{frame}
 
-\begin{frame}{Memory store bug}
+\begin{frame}{Memory store bug explained (1/3)}
 
     Let minimal signed int \texttt{MIN\_INT} = $-4775808$ 
 
@@ -153,11 +155,11 @@ ASN\_STRTOX\_OK
 
     \paragraph{{\bf Scenario 1}:}
 
-    Assume that \texttt{*end = *(str + 9)} and  \texttt{end} points outside of \texttt{*str}.
+    Assume that \texttt{*end = *(str + 9)} and  \texttt{end} points right after \texttt{*str}.
 
      {\color{red}2d 34 37 37 35 38 30 {\color{blue}$\overbrace{31}^{\texttt{*(str + 7)}}$} 31 31 $\ldots$ $\overbrace{\texttt{X}}^{\texttt{*end}}$}
 
-     Then at \texttt{*(str + 7)} we store \texttt{*end = (str + 7)}
+     Then at \texttt{*(str + 9)} we store \texttt{*end = (str + 7)}
 
      Let \texttt{(str + 7) = 21 21 21 26} 
 
@@ -167,12 +169,12 @@ ASN\_STRTOX\_OK
      
 
      
-     The output is  \texttt{ASN\_ERROR\_RANGE}.
+     The output is  \color{green}\texttt{ASN\_ERROR\_RANGE}.
 
 
   \end{frame}
 
-  \begin{frame}{Memory store bug}
+  \begin{frame}{Memory store bug explained (2/3)}
 
     Let minimal signed int \texttt{MIN\_INT} = $-4775808$ 
 
@@ -180,7 +182,7 @@ ASN\_STRTOX\_OK
 
     \paragraph{{\bf Scenario 2}:}
 
-    Assume that \texttt{*end = *(str + 9)} and \texttt{end} points inside of \texttt{*str}:
+    Assume that \texttt{*end = *(str + 7)} and \texttt{end} points inside of \texttt{*str}:
     
     {\color{red}2d 34 37 37 35 38 {\color{blue} $\overbrace{30 \; 31 \; 31 \; 31}^{\texttt{*end}}$}}
     
@@ -195,18 +197,28 @@ ASN\_STRTOX\_OK
 
     And since at \texttt{*(str + 8)} we read ``!'' 
 
-    The output is \texttt{ASN\_EXTRA\_DATA}.
+    The output is \color{red}\texttt{ASN\_EXTRA\_DATA}.
     
     \end{frame}
 
+\begin{frame}{Specification question}
+After addressing the two buges we discovered we were able to successfully verify that the function finally corresponds to the specification we wrote for. However, it was noticed the following behavior:
 
+For input \texttt{"a"} it returns {\color{green}\texttt{0,ASN\_STRTOX\_EXPECT\_MORE}}.
 
-\begin{frame}{\texttt{asn\_strtoimax\_lim}}
-   This configuration may happen only on some hardware architectures and almost impossible to reproduce. Yet, the vulnerability is there and posses a potential problem.
-   
-  This code has been extensively tested and used for 15 years. Formal verification guarantees absence of these kind of bugs.
+Is it a bug or a feature?
 
-  
+\end{frame}
+
+\begin{frame}{Lessons learned}
+
+This code was part of the library for 15 years. The library is covered by extensive unit and randomized tests. It is used in production by multiple users. Yet, the vulnerabilities are there and pose potential problems.
+
+\begin{enumerate}
+    \item The first bug is related to data type ranges and modulo integer arithmetic. These sort of problems are fairly common and require careful coding to be avoided. Formal verification enforces a strict mathematical model of all computer arithmetic and invariably exposes all such bugs.
+    \item The second problem was related to \textit{pointer aliasing}. These problems are not immediately obvious because C language does not allow us to enforce any memory aliasing restrictions (unlike, say Rust). In formal verification, there is a rigorous model to analyze such kind of problems called \textit{separation logic}.
+    \item The third issue shows us that your formal verification is only as good as your specification.
+\end{enumerate}
 
 \end{frame}
 
