@@ -239,13 +239,12 @@ In particular, we will talk about the Coq proof assistant: \includegraphics[widt
   \begin{itemize}
   
     \item define functions and predicates
-   \item state mathematical theorems and software specifications
+    \item state mathematical theorems and software specifications
     \item interactively develop formal proofs of theorems
-   \item machine-check these proofs by a relatively small certification kernel
+    \item machine-check these proofs by a relatively small trusted kernel
     \item extract certified programs to languages like OCaml, Haskell or Scheme.
   \end{itemize}
   
-
 \end{frame}
 
 
@@ -314,7 +313,7 @@ Theorem plus_2_3 : (S (S O)) + (S (S (S O))) = (S (S (S (S (S O))))).
 
 
 \begin{frame}[fragile]{More proofs}
-\begin{theorem} $\forall n \; (0 + n = n)$.
+\begin{theorem} $\forall n,\ 0 + n = n$.
 \end{theorem}
 
 To prove this we also use the definition of addition: since the recursion is on the first term, we are in the base case.
