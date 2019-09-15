@@ -735,7 +735,7 @@ By Curry-Howard Isomorphism, the proof of this statement corresponds to construc
 \begin{frame}{Verifying imperative programs}
     We use CompCert and use the following approach to verifying C programs:
   \begin{itemize}
-  \item Parse C code into a Coq abstract syntax tree using C light\footnote{C light is a subset of C} generator of CompCert
+  \item Parse C code into a Coq abstract syntax tree using Clight\footnote{Clight is a subset of C} generator of CompCert
   \item Write a functional specification in Coq, using CompCert's memory model and integer representations
   \item Prove properties about the generated AST  using semantics of C (light) defined in CompCert
 \end{itemize}
@@ -749,7 +749,7 @@ By Curry-Howard Isomorphism, the proof of this statement corresponds to construc
 \begin{lstlisting}[language=C]
 unsigned int factorial (unsigned int input) {
   unsigned int output = 1;
-  while (input){
+  while (input) {
       output = output*input ;
       input = input - 1 ;
     } 
@@ -763,7 +763,7 @@ The specification stays the same.
 \end{frame}
 
 \begin{frame}[fragile]{ Syntax of C programs in Coq}
-C function embedded in Coq as an abstract syntax tree:
+Our C function can be represented in Coq as an abstract syntax tree:
   \begin{lstlisting}[language=Coq]
 (Ssequence
   (* int output = 1 *)
@@ -787,7 +787,7 @@ C function embedded in Coq as an abstract syntax tree:
 \end{frame}
 
 
-\begin{frame}[fragile]{C light Expressions: Examples}
+\begin{frame}[fragile]{Clight Expressions: Examples}
   
   Expressions are annotated with types: 
   
@@ -814,10 +814,10 @@ C function embedded in Coq as an abstract syntax tree:
   
 \end{frame}
 
-\begin{frame}[fragile]{C light Statements: Examples}
+\begin{frame}[fragile]{Clight Statements: Examples}
 
   \begin{lstlisting}[language=Coq]
-     (* int s = 1 *)
+      (* int s = 1 *)
       (Sset _s (Econst_int (Int.repr 1) tint))
 
       (* return s *)
@@ -844,7 +844,7 @@ C function embedded in Coq as an abstract syntax tree:
 \subsection{Semantics of C programs in Coq}
 
 \begin{frame}{Operational Semantics}
-    Our goal is to prove that programs written in C light behave as intended. To do this we need to formalize the notion of meaning of a C program. We do this using {\bf operational semantics}.
+    Our goal is to prove that programs written in Clight behave as intended. To do this we need to formalize the notion of meaning of a C program. We do this using {\bf operational semantics}.
 
     \bigskip
     
@@ -862,7 +862,7 @@ C function embedded in Coq as an abstract syntax tree:
    %\item Each syntactic element is related to the intended result of executing this element (new local environment, memory, outcome or value).
     
     \item Expressions are mapped to memory locations or values (integers, bool etc).
-    \item The execution of statements produces {\bf outcomes} (break, normal, return), updated memory and local environment. 
+    \item The execution of statements produces {\bf outcomes} (break, normal, return), an updated memory and local environment. 
    \end{itemize}
 
 \end{frame}
@@ -937,7 +937,7 @@ These operations are to satisfy some basic properties like:  \texttt{load} succe
       Going back to our first example of \texttt{asn\_strtoimax\_lim}:
       \begin{itemize}
           \item  We wrote a formal specification of the function (based on the comment and analysis of the function)
-          \item Then we produced C light AST of the function using C light generator of CompCert
+          \item Then we produced Clight AST of the function using Clight generator of CompCert
           \item And proved that the resulting AST evaluates to correct values on all valid inputs using operational semantics. 
             \end{itemize}
             
@@ -956,6 +956,25 @@ These operations are to satisfy some basic properties like:  \texttt{load} succe
   \item[Krakatoa]: A Java code certification tool that uses both Coq and Why to verify the soundness of implementations with regards to the specifications.
   \end{description}
   \end{frame}
+
+\begin{frame}{Questions?}
+
+Examples from this presentation: \url{https://github.com/digamma-ai/formal-verification-intro}
+
+\vspace*{2\baselineskip}
+
+Contact: 
+\begin{itemize}
+    \item Vadim Zaliva, \includegraphics[height=\fontcharht\font`\B]{email.png}\ \href{mailto:vzaliva@cmu.edu}{vzaliva@cmu.edu}, \includegraphics[height=\fontcharht\font`\B]{Twitter_Social_Icon_Square_Color.png}\ \href{https://twitter.com/vzaliva}{@vzaliva}
+    \item Nika Pona, \includegraphics[height=\fontcharht\font`\B]{email.png}\ \href{mailto:npona@digamma.ai}{npona@digamma.ai}
+\end{itemize}
+
+
+
+
+\end{frame}
+    
+\end{frame}
 
 \begin{frame}[allowframebreaks]{References}
 
