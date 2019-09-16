@@ -29,14 +29,22 @@
 \subtitle{A Primer}
 % \date{\today}
 \date{\date{}}
-\author[shortname]{Vadim Zaliva \textsuperscript{1} \and Nika Pona \inst{2}}
-\institute[shortinst]{\textsuperscript{1}Carnegie Mellon  University \and \inst{2} Digamma.ai}
+\author[shortname]{Vadim Zaliva \inst{1} \and Nika Pona \inst{2}}
+\institute[shortinst]{\inst{1}Carnegie Mellon University \and \inst{2} Digamma.ai}
 
 % \titlegraphic{\hfill\includegraphics[height=1.5cm]{logo.pdf}}
 
 \begin{document}
 
 \maketitle
+\begin{frame}
+\begin{abstract}
+
+In this presentation we will talk about formal verification of programs written in C using Coq proof assistant. We will introduce Coq's basic functionality, explain how Coq works internally and on a toy example show how to use it to verify functional and imperative programs, and how the two approaches differ. We will also show a motivational example of verifying a function from existing C code. 
+    
+\end{abstract}
+
+\end{frame}
 
 \begin{frame}{Table of contents}
   \setbeamertemplate{section in toc}[sections numbered]
@@ -153,19 +161,19 @@ return & \color{red}\texttt{\ 70, ASN\_STRTOX\_OK}\\
 
     \texttt{*str} = {\color{red}2d 34 37 37 35 38 30 31 31 31} ( stands for ``-477580111'') 
 
-    \paragraph{{\bf Scenario 1}:}
+   {\bf Scenario 1}:
 
-    Assume that \texttt{*end = *(str + 9)} and  \texttt{end} points right after \texttt{*str}.
+    Assume that \texttt{*end = str + 9} and \texttt{end} $\geq$ $\texttt{str + 9}$.
 
-     {\color{red}2d 34 37 37 35 38 30 {\color{blue}$\overbrace{31}^{\texttt{*(str + 7)}}$} 31 31 $\ldots$ $\overbrace{\texttt{X}}^{\texttt{*end}}$}
+     {\color{red}2d 34 37 37 35 38 30 {\color{blue}$\overbrace{31}^{\texttt{str + 7}}$} 31 31 $\ldots$ $\overbrace{\texttt{X}}^{\texttt{end}}$}
 
-     Then at \texttt{*(str + 9)} we store \texttt{*end = (str + 7)}
+     Then at \texttt{str + 7} we store \texttt{*end = (str + 7)}
 
-     Let \texttt{(str + 7) = 21 21 21 26} 
+     Let \texttt{str + 7 = 21 21 21 26} 
 
-     {\color{red}2d 34 37 37 35 38 30 31 {\color{blue} $\overbrace{31}^{\texttt{*(str + 8)}}$} 31  $\ldots$ $\overbrace{\texttt{21 21 21 26}}^{\texttt{*end}}$}
+     {\color{red}2d 34 37 37 35 38 30 31 {\color{blue} $\overbrace{31}^{\texttt{str + 8}}$} 31  $\ldots$ $\overbrace{\texttt{21 21 21 26}}^{\texttt{end}}$}
      
-     And since at \texttt{*(str + 8)} we read ``1''
+     And since at \texttt{str + 8} we read `1'
      
 
      
@@ -180,22 +188,22 @@ return & \color{red}\texttt{\ 70, ASN\_STRTOX\_OK}\\
 
     \texttt{*str} = {\color{red}2d 34 37 37 35 38 30 31 31 31} (stands for ``-477580111'') 
 
-    \paragraph{{\bf Scenario 2}:}
+    {\bf Scenario 2}:
 
-    Assume that \texttt{*end = *(str + 7)} and \texttt{end} points inside of \texttt{*str}:
+    Assume that \texttt{*end = str + 9} and \texttt{end = str + 7}:
     
-    {\color{red}2d 34 37 37 35 38 {\color{blue} $\overbrace{30 \; 31 \; 31 \; 31}^{\texttt{*end}}$}}
+    {\color{red}2d 34 37 37 35 38 {\color{blue} $\overbrace{30 \; 31 \; 31 \; 31}^{\texttt{end}}$}}
     
 
-    Then at \texttt{*(str + 7)} we store \texttt{*end = (str + 7)}
+    Then at \texttt{str + 7} we store \texttt{*end = str + 7}
 
-     Let \texttt{(str + 7) = 21 21 21 26} 
+     Let \texttt{str + 7 = 21 21 21 26} 
 
    
-    {\color{red}2d 34 37 37 35 38 30 {\color{blue}$\overbrace{21 \; 21 \; 21 \; 26}^{\texttt{*end}}$}}
+    {\color{red}2d 34 37 37 35 38 30 {\color{blue}$\overbrace{21 \; 21 \; 21 \; 26}^{\texttt{end}}$}}
     (stands for $``-477580!!!\&''$)
 
-    And since at \texttt{*(str + 8)} we read ``!'' 
+    And since at \texttt{str + 8} we read `!' 
 
     The output is \color{red}\texttt{ASN\_EXTRA\_DATA}.
     
@@ -880,13 +888,12 @@ Our C function can be represented in Coq as an abstract syntax tree:
 
 \end{frame}
    
-\begin{frame}[fragile]{C memory model}
+\begin{frame}{C memory model}
    In order to verify a program written in C, one has to have a good model of variable environments, integer and pointer arithmetic and memory model. 
    
     A {\bf memory model} is a specification of memory states and operations over memory.
     
-    In CompCert,
-   memory states are accessed by addresses, pairs of a block
+    In CompCert, memory states are accessed by addresses, pairs of a block
   identifier $b$ and a byte offset $ofs$ within that block.
   Each address is associated to permissions ranging from allowing all operations (read, write etc.) to allowing no operation.
 \end{frame}
@@ -910,14 +917,15 @@ These operations are to satisfy some basic properties like:  \texttt{load} succe
     
     
    \begin{quote}
-     For any memory $m$ and local environments $le$ with variables \texttt{input} assigned $n$ in $le$, execution of \texttt{f\_factorial} terminates and returns $fact(n)$ with resulting memory $m' = m$.
+     For any memory $m$ and local environments $le$ with variables $\texttt{input}$ assigned $n$ in $le$, execution of $\texttt{f\_factorial}$ terminates and returns $fact(n)$ with resulting memory $m' = m$.
    \end{quote}
    
-   \begin{theorem} \forall le \; m, 
+   \begin{theorem} $\forall le \; m,$ 
     
-    le\{\texttt{input = n}\} \rightarrow 
+    $le\{\texttt{input = n}\} \rightarrow $
     
-    \exists le', le, m, \texttt{factorial} \Rightarrow  le', m,  {\bf return}(\texttt{fact n})    
+    $\exists le', le, m, \texttt{factorial} \Rightarrow  le', m,  {\bf return}(\texttt{fact n}) $
+    
     \end{theorem}
 
    Hence we proved that factorial works correctly on all inputs\footnote{For simplicity, here we also assume that (fact n) doesn't overflow}.
@@ -974,8 +982,6 @@ Contact:
 
 \end{frame}
     
-\end{frame}
-
 \begin{frame}[allowframebreaks]{References}
 
   \bibliography{demo}
