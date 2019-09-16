@@ -215,7 +215,7 @@ We have demonstrated that when the value of the \texttt{end} pointer is treated 
 
 On the other hand, it is hard to think of a legitimate use-case where the pointer would be a part the input data. Under such interpretation, this is an implicit specification, mandating that:
 
-\texttt{(*end < end) || (*end + sizeof(const char *) < str)}.
+\texttt{(*end < end) || (end + sizeof(const char *) < str)}.
 
 \end{frame}
 
