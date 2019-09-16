@@ -209,6 +209,13 @@ return & \color{red}\texttt{\ 70, ASN\_STRTOX\_OK}\\
     
     \end{frame}
 
+\begin{frame}{Memory store bug or implicit restriction?}
+
+We have demonstrated that when \texttt{end} pointer is treated as part of the parsed string, there is a bug where it gets ovewer
+
+    
+\end{frame}
+
 \begin{frame}{Specification question}
 After addressing the two buges we discovered we were able to successfully verify that the function finally corresponds to the specification we wrote for. However, it was noticed the following behavior:
 
@@ -487,7 +494,7 @@ A more complex example.
      Consider the simplest intuitionistic logic {\bf Impl}. The formulae of {\bf Impl} are the following: 
      \begin{description}
      \item[Var] propositional variables 
-     \item[Impl] $\tau \rightarrow \sigma$, for $\tau, \sigma$ propositional formulae
+     \item[Impl] $\phi \rightarrow \psi$, for $\phi, \psi$ propositional formulae
        \end{description}
 
      Examples of formulae: $p \rightarrow p$, $p \rightarrow (q \rightarrow p)$.
