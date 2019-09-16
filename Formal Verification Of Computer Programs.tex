@@ -209,11 +209,14 @@ return & \color{red}\texttt{\ 70, ASN\_STRTOX\_OK}\\
     
     \end{frame}
 
-\begin{frame}{Memory store bug or implicit restriction?}
+\begin{frame}{Memory store: A bug or an implicit restriction?}
 
-We have demonstrated that when \texttt{end} pointer is treated as part of the parsed string, there is a bug where it gets ovewer
+We have demonstrated that when the value of the \texttt{end} pointer is treated as a part of the input data, there is a bug where the resulting error value could be incorrect.
 
-    
+On the other hand, it is hard to think of a legitimate use-case where the pointer would be a part the input data. Under such interpretation, this is an implicit specification, mandating that:
+
+\texttt{(*end < end) || (*end + sizeof(const char *) < str)}.
+
 \end{frame}
 
 \begin{frame}{Specification question}
