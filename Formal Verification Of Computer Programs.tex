@@ -215,7 +215,8 @@ We have demonstrated that when the value of the \texttt{end} pointer is treated 
 
 On the other hand, it is hard to think of a legitimate use-case where the pointer would be a part the input data. Under such interpretation, there is an implicit pre-condition in the specification, mandating that:
 
-\texttt{(*end < end) || (end + sizeof(const char *) <= str)}.
+{\small
+\texttt{(*end < end) || (end + sizeof(const char *) <= str)}}
 
 \end{frame}
 
@@ -673,14 +674,7 @@ By Curry-Howard Isomorphism, the proof of this statement corresponds to construc
     {\hfill\cite{SozeauPic}}
 \end{frame}
 
-\begin{frame}
- Now we will see how Coq is used for verifying programs.
-\end{frame}
-
-
-
 \section{Verifying C code: a detailed example}
-
 
 \begin{frame}[fragile]{Factorial example}
   Mathematical specification of factorial is a recursive equation, for ($0 \leq n$):\begin{align*}
@@ -890,7 +884,11 @@ Our C function can be represented in Coq as an abstract syntax tree:
       \[ le, m , \texttt{(Econst\_int Int.zero tint)} \Rightarrow 0, le, m \]
 
    Evaluation of statement \texttt{(Sset \_s (Econst\_int Int.zero tint))} in local environment $le$ and memory $m$ produces new local environment $le'$ with \texttt{\_s} mapped to value $0$ and a {\bf normal} outcome. 
-   \[ le, m, \texttt{(Sset \_s (Econst\_int Int.zero tint))} \Rightarrow le\{\_s = 0\}, m, \texttt{normal} \]
+   \[ 
+   \begin{split}
+le, m, \texttt{(Sset \_s (Econst\_int Int.zero tint))} \Rightarrow \\ le\{\_s = 0\}, m, \texttt{normal} 
+\end{split}
+\]
 
    Statement \texttt{(Sreturn (Some (Etempvar \_s tint)))} evaluates to a {\bf return}(\texttt{s}) outcome and leaves $le$ and memory unchanged.
      \[ le, m,\texttt{(Sreturn (Some (Etempvar \_s tint)))}  \Rightarrow le, m, \texttt{return}(\texttt{s}) \]
@@ -977,7 +975,7 @@ These operations are to satisfy some basic properties like:  \texttt{load} succe
 
 \begin{frame}{Questions?}
 
-Examples from this presentation: \url{https://github.com/digamma-ai/formal-verification-intro}
+Examples from this presentation: \\ {\small\url{https://github.com/digamma-ai/formal-verification-intro}}
 
 \vspace*{2\baselineskip}
 
