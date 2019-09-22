@@ -265,6 +265,23 @@ To prove this we also use the definition of addition: since the recursion is on 
 \end{frame}
 
 \begin{frame}{Church Numerals}
+    Similarly, we can encode \textit{natural numbers}:
+
+\begin{align*}
+c_0 &= \lambda s.\lambda z. z \\
+c_1 &= \lambda s.\lambda z. s z \\
+c_2 &= \lambda s.\lambda z. s (s z) \\ 
+c_3 &= \lambda s.\lambda z. s (s (s z)) \\
+\text{\textit{etc.}}
+\end{align*}
+
+    And some basic boolean algebra operations:   
+\begin{align*}
+\mathrm{succ} &= \lambda n. \lambda s. \lambda z.\ s\ (n\ s\ z)\\
+\mathrm{plus} &= \lambda m. \lambda n. \lambda s. \lambda z.\ m\ s\ (n\ s\ z)\\
+\mathrm{times} &= \lambda m. \lambda n.\ m\ (\mathrm{plus}\ n)\ c_0
+\end{align*}
+
 \end{frame}
 
 \begin{frame}{Simply typed lambda-calculus}
