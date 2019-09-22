@@ -38,10 +38,10 @@ Theorem plus_commut : forall m n : nat, n + m = m + n.
 Proof.
   induction m.
   - simpl.
-    eapply plus_n_O.
+    apply plus_n_O.
   - induction n.
-    -- erewrite plus_n_O.
-       erewrite plus_O_n.
+    -- rewrite plus_n_O.
+       rewrite plus_O_n.
        reflexivity.
     -- simpl.
        f_equal.
@@ -51,15 +51,16 @@ Proof.
        simpl.
        f_equal.
        symmetry.
-       eapply IHm.
+       apply IHm.
 Qed.
 
 (* A simple example of "programming with dependent types"  *)
 
 (* We declaratively define m minus n : z s.t. m = n + z. We prove that for each m and n such z exists  *)
 
-Lemma minus : forall m n : nat, n <= m -> { z | m = n + z }.
+Definition minus (m n : nat) {H:n <= m}: { z | m = n + z }.
 Proof.
+  revert m n H.
   induction m.
   - exists 0. omega. (* omega is the tactic that can solve simple arithmetic goals *)
   - intros.
