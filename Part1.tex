@@ -1,4 +1,4 @@
-\documentclass[10pt]{beamer}
+\documentclass[10pt,usenames,dvipsnames]{beamer}
 
 \usepackage{multicol}
 \usetheme[progressbar=frametitle]{metropolis}
@@ -11,7 +11,8 @@
 \usepackage{graphicx}
 \usepackage{bussproofs}
 \usepackage{xspace}
-\usepackage{xcolor}
+\usepackage[usenames,dvipsnames]{xcolor}
+
 \newcommand{\themename}{\textbf{\textsc{metropolis}}\xspace}
 
 \usepackage{listings}
@@ -23,6 +24,17 @@
     stepnumber=1,
     basicstyle=\color{black}
 }
+
+
+\definecolor{diffstart}{named}{gray}
+\definecolor{diffincl}{named}{OliveGreen}
+\definecolor{diffrem}{named}{red}
+
+\lstdefinelanguage{diff}{
+    morecomment=[f][\color{diffstart}]{@@},
+    morecomment=[f][\color{diffincl}]{+},
+    morecomment=[f][\color{diffrem}]{-},
+  }
 
 \input{listings-coq}
 
@@ -93,14 +105,6 @@ In what follows we will talk about formal verfication using {\bf Coq proof assis
 \end{frame}
 
 
-\begin{frame}{A bug uncovered during verification}
-
-   During correctness proof, some proof obligations about the for loop were produced that could not be met, because of a bug in the function. Can you see it?
-
-  \url{https://github.com/vlm/asn1c/issues/344}
-  
-\end{frame}
-
 \begin{frame}{Negative range bug example}
 
 When we go beyond allowed \textit{int} range, a wrong result is given for some inputs:  
@@ -130,6 +134,14 @@ return & \color{red}\texttt{\ 70, ASN\_STRTOX\_OK}\\
     Formal proof has to cover all cases, hence this bug became obvious during the proof.
     
 \end{frame}{}
+
+\begin{frame}{A bug uncovered during verification}
+
+  The bug (\href{https://github.com/vlm/asn1c/issues/344}{\#344}) was filed and promptly fixed by developers:
+  
+  {\fontsize{6}{2}\selectfont \lstinputlisting[language=diff]{bug1fix.diff}}
+
+\end{frame}
 
 \begin{frame}{\texttt{asn\_strtoimax\_lim} fixed}
   
