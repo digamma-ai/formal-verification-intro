@@ -1,0 +1,29 @@
+--- asn_strtoimax_lim_old.c	2019-09-11 10:18:00.013478144 -0700
++++ asn_strtoimax_lim.c	2019-09-11 10:18:00.013478144 -0700
+@@ -33,15 +28,21 @@
+ 					    if(sign > 0) { value = value * 10 + d;
+ 					    } else { sign = 1;
+ 						     value = -value * 10 - d; }
++			str += 1;
++			if(str < *end) {
++			    // If digits continue, we're guaranteed out of range.
++			    *end = str;
++			    if(*str >= 0x30 && *str <= 0x39) { return ASN_STRTOX_ERROR_RANGE;
++			    } else { *intp = sign * value;
++				      return ASN_STRTOX_EXTRA_DATA; }}
++			break;
++		    } else { *end = str;
++			     return ASN_STRTOX_ERROR_RANGE; }
+ 				    } else { *end = str;
+ 					     return ASN_STRTOX_ERROR_RANGE; }
+ 			    } else { *end = str;
+-				     return ASN_STRTOX_ERROR_RANGE; } }
+-			continue;
+-		    default:
+-			*end = str;
+ 			*intp = sign * value;
+-			return ASN_STRTOX_EXTRA_DATA; } }
++		     return ASN_STRTOX_EXTRA_DATA; }}
+ 	    *end = str;
+ 	    *intp = sign * value;
+ 	    return ASN_STRTOX_OK; }
