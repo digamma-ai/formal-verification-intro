@@ -144,7 +144,10 @@ Theorem plus_2_3 : (S (S O)) + (S (S (S O))) = (S (S (S (S (S O))))).
 \end{frame}
 
 
-\begin{frame}[fragile]{More proofs}
+\begin{frame}{Demo}
+\end{frame}
+
+\begin{frame}<0>[fragile]{More proofs}
 \begin{theorem} $\forall n,\ 0 + n = n$.
 \end{theorem}
 
@@ -174,7 +177,7 @@ To prove this we also use the definition of addition: since the recursion is on 
 
 
 
-\begin{frame}[fragile]{More proofs}
+\begin{frame}<0>[fragile]{More proofs}
 
   Most proofs would need to go by induction (Why the previous proof won't work below? See how \texttt{plus} is defined.)
 
@@ -205,7 +208,7 @@ To prove this we also use the definition of addition: since the recursion is on 
 
    \section{How does Coq work?}
 \begin{frame}{How does Coq work?}
-    We can formalize programs, properties and proofs in the same language, as well as efficiently and reliably check proof correctness due to the so-called {\bf Curry-Howard isomorphism}.
+    We can formalize programs, properties and proofs in the same language, as well as efficiently and reliably check proof correctness due to the so-called {\bf Curry-Howard Isomorphism}.
 
     Curry-Howard isomorphism is a correspondence between programs and terms on one hand and proofs and types on the other. All logical statements in Coq are typing judgments and thus checking the correctness of proofs amounts to type checking. Let's see what it means precisely on a small example.
    \end{frame}
@@ -231,20 +234,39 @@ To prove this we also use the definition of addition: since the recursion is on 
   %   \[ ((\lambda x.(x z)) y \Rightarrow_\beta (y z) \]
 
 \end{frame}
-\begin{frame}{Simply typed lambda calculus}
+
+\begin{frame}{The untyped lambda calculus}
        
      In lambda calculus one could encode basic data types such as natural numbers and lists, as well as functions on them and logical constants and operations. {\bf ST} could be extended with a fixpoint operator to allow for recursive functions.
 
      Examples of terms:
 
-     $\lambda x.x$ (identity function)
+     $id = \lambda x.x$ (identity function)
      
-     $\lambda x.\lambda y. x$ (true\footnote{By convention: you could define constants in a different way as well.})
-
-     $\lambda x.\lambda y. y$ (false or zero)
-
-     $\lambda n. \lambda y. \lambda x. y (n y x)$ (successor function)
 \end{frame}
+
+\begin{frame}[fragile]{Church Booleans}
+       
+    We can encode boolean algebra using our calculus.
+    
+    The \emph{True} and \emph{False} values:
+\begin{align*}
+\mathrm{true} &= \lambda t.\lambda f. t \\
+\mathrm{false} &= \lambda t.\lambda f. f
+\end{align*}
+
+    And some basic boolean algebra operations:   
+\begin{align*}
+\mathrm{and} &= \lambda b. \lambda c. (b\ c\ \mathrm{false}) \\
+\mathrm{or}  &= \lambda x. \lambda y. (x\ \mathrm{true}\ (y\ \mathrm{true}\ \mathrm{false})) \\
+\mathrm{not} &= \lambda b. (b\ \mathrm{false}\ \mathrm{true})
+\end{align*}
+
+\end{frame}
+
+\begin{frame}{Church Numerals}
+\end{frame}
+
 \begin{frame}{Simply typed lambda-calculus}
        We are interested in a {\bf typed} lambda calculus. The types of {\bf ST} are:
         \begin{description}
