@@ -107,22 +107,22 @@ In what follows we will talk about formal verfication using {\bf Coq proof assis
 
 \begin{frame}{Negative range bug example}
 
-When we go beyond allowed \textit{int} range, a wrong result is given for some inputs:  
+When we go beyond allowed \textit{int} range, a wrong result is given for some inputs\footnote{Assume we are working on a 8-bit system and maximal signed int \texttt{MAX\_INT} is 127}:  
 
 \begin{table}[]
     \centering
     \begin{tabular}{l|l}
-input & \texttt{-9223372036854775809} \\
-intmax & \texttt{\ 9223372036854775807}\\
-upper boundary& \texttt{\ 922337203685477580} \\
+input & \texttt{-128} \\
+intmax & \texttt{\ 127}\\
+upper boundary& \texttt{\ 12} \\
 last digit max& \texttt{\ 7}\\
 return & \color{green}\texttt{\ ASN\_STRTOX\_ERROR\_RANGE}\\
 \hline \\
-input & \texttt{-9223372036854775810} \\
-intmax & \texttt{\ 9223372036854775807}\\
-upper boundary& \texttt{\ 922337203685477580} \\
+input & \texttt{-1281} \\
+intmax & \texttt{\ 127}\\
+upper boundary& \texttt{\ 12} \\
 last digit max& \texttt{\ 7}\\
-return & \color{red}\texttt{\ 70, ASN\_STRTOX\_OK}\\
+return & \color{red}\texttt{\ -127, ASN\_STRTOX\_OK}\\
     \end{tabular}
 \end{table}
 
@@ -139,7 +139,7 @@ return & \color{red}\texttt{\ 70, ASN\_STRTOX\_OK}\\
 
   The bug (\href{https://github.com/vlm/asn1c/issues/344}{\#344}) was filed and promptly fixed by developers:
   
-  {\fontsize{6}{2}\selectfont \lstinputlisting[language=diff]{bug1fix.diff}}
+  {\fontsize{5}{2}\selectfont \lstinputlisting[language=diff]{bug1fix.diff}}
 
 \end{frame}
 
