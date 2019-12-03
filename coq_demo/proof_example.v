@@ -1,5 +1,65 @@
 Require Import Extraction.
-Require Import ZArith.
+Require Import ZArith Psatz.
+
+Fixpoint fact (n : nat) : nat :=
+  match n with
+  | O => 1
+  | S n' => (S n') * fact n'
+  end.
+
+Fixpoint fact_acc (n : nat) (acc : nat) :=
+    match n with
+    | 0 => acc
+    | S k => fact_acc k (n * acc)
+    end.
+
+  Definition fact' (n : nat) :=
+    fact_acc n 1.
+
+Inductive factorial : nat -> nat -> Prop :=
+| FactZero : factorial 0 1
+| FactSucc : forall n m, factorial n m -> factorial (S n) ((S n)*m). 
+
+Theorem fact_correct : forall n, factorial n (fact n).
+  Proof.
+    induction n.
+    - eapply FactZero.
+    - simpl.
+      eapply FactSucc.
+      assumption.
+  Qed.
+
+Lemma fact_tr_acc_mult : forall (n m : nat),
+  fact_acc n m = m * fact_acc n 1.
+Proof.
+  induction n as [ | k IH]; intro p.
+  - simpl. nia.
+  - replace (fact_acc (S k) p) with (fact_acc k ((S k) * p)).
+    -- 
+       rewrite IH. simpl. rewrite mult_1_r.
+       rewrite IH with (m := S k).
+       nia.
+    -- simpl. trivial.
+Qed.
+
+Theorem fact'_correct : forall (n : nat), 
+  factorial n (fact' n).
+Proof.
+  intros n. unfold fact'.
+  induction n as [ | k IH].
+  - simpl. econstructor.
+  - simpl. rewrite mult_1_r.
+    destruct k as [ | m].
+    -- simpl. rewrite <- mult_1_r. 
+       econstructor.
+       econstructor.
+    -- rewrite fact_tr_acc_mult.
+       econstructor.
+       assumption.
+Qed.
+
+Recursive Extraction fact.
+Recursive Extraction fact'.
 
 (* Definition of plus *)
 Print Nat.add.
