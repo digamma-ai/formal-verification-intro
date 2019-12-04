@@ -1,5 +1,5 @@
-\documentclass[10pt,usenames,dvipsnames]{beamer}
-
+\documentclass[10pt,usenames,dvipsnames,landscape]{beamer}
+\usepackage[landscape]{geometry}
 \usepackage{multicol}
 \usetheme[progressbar=frametitle]{metropolis}
 \usepackage{appendixnumberbeamer}
@@ -391,11 +391,23 @@ Then we can go on and prove that your favorite sorting algorithm's output is \te
 \begin{frame}{Verifying imperative programs}
     We use CompCert and use the following approach to verifying C programs:
   \begin{itemize}
-  \item Parse C code into a Coq abstract syntax tree using Clight\footnote{Clight is a subset of C} generator of CompCert
+  \item Parse C code into a Coq abstract syntax tree using C light\footnote{C light is a subset of C} generator of CompCert
   \item Write a functional specification in Coq, using CompCert's memory model and integer representations
   \item Prove properties about the generated AST  using semantics of C (light) defined in CompCert
 \end{itemize}
 \end{frame}
+
+\begin{frame}{Unsupported features in C light}
+  \begin{itemize}
+  \item \texttt{extern} declaration of arrays
+\item structs and unions cannot be passed by value
+\item  type qualifiers (\texttt{const}, \texttt{volatile}, \texttt{restrict}) are erased at parsing
+\item within expressions no side-effects nor function calls (meaning all C light expressions always terminate and are pure)
+\item statements: in \texttt{for(s1, a, s2)} s1 and s2 are statements, that do not terminate by break
+\item \texttt{extern} functions are only declared and not defined, used to model system calls
+\end{itemize}
+  
+  \end{frame}
 
 
 \begin{frame}[fragile]{Factorial example: verifying a C program}
@@ -521,24 +533,31 @@ Our C function can be represented in Coq as an abstract syntax tree:
     \item The execution of statements produces {\bf outcomes} (break, normal, return), an updated memory and local environment. 
    \end{itemize}
 
-\end{frame}
-
-\begin{frame}{Examples}
-     Expression  \texttt{(Econst\_int Int.zero tint)}   is evaluated to value \texttt{0} in any local environment and memory. 
-      \[ le, m , \texttt{(Econst\_int Int.zero tint)} \Rightarrow 0, le, m \]
-
-   Evaluation of statement \texttt{(Sset \_s (Econst\_int Int.zero tint))} in local environment $le$ and memory $m$ produces new local environment $le'$ with \texttt{\_s} mapped to value $0$ and a {\bf normal} outcome. 
-   \[ 
-   \begin{split}
-le, m, \texttt{(Sset \_s (Econst\_int Int.zero tint))} \Rightarrow \\ le\{\_s = 0\}, m, \texttt{normal} 
-\end{split}
-\]
-
-   Statement \texttt{(Sreturn (Some (Etempvar \_s tint)))} evaluates to a {\bf return}(\texttt{s}) outcome and leaves $le$ and memory unchanged.
-     \[ le, m,\texttt{(Sreturn (Some (Etempvar \_s tint)))}  \Rightarrow le, m, \texttt{return}(\texttt{s}) \]
-    
+   
 
 \end{frame}
+
+
+\begin{frame}[t,fragile]{CompCert Integers}
+
+  Machine integers modulo $2^N$ are defined as a module type in \url{CompCert/lib/Integers.v}. $8, 32, 64$-bit integers are supported, as well as 32 and 64-bit pointer offsets.\\
+  
+\bigskip
+
+A machine integer (type \texttt{int}) is represented as a Coq arbitrary-precision
+integer (type \texttt{Z}) plus a proof that it is in the range 0 (included) to
+modulus (excluded).
+
+
+\begin{lstlisting}[language=Coq]
+Record int: Type :=
+      {| intval: Z;
+         intrange: -1 < intval < modulus |}.
+\end{lstlisting}
+
+\end{frame}
+  
+
    
 \begin{frame}{C memory model}
    In order to verify a program written in C, one has to have a good model of variable environments, integer and pointer arithmetic and memory model. 
@@ -561,6 +580,23 @@ le, m, \texttt{(Sset \_s (Econst\_int Int.zero tint))} \Rightarrow \\ le\{\_s = 
 \item [free]: invalidate a memory block.
 \end{description}
 These operations are to satisfy some basic properties like:  \texttt{load} succeeds if and only if the access is valid for reading; the value returned by \texttt{load} belongs to the type of the memory quantity accessed etc. 
+
+\end{frame}
+
+\begin{frame}{Examples}
+     Expression  \texttt{(Econst\_int Int.zero tint)}   is evaluated to value \texttt{0} in any local environment and memory. 
+      \[ le, m , \texttt{(Econst\_int Int.zero tint)} \Rightarrow 0, le, m \]
+
+   Evaluation of statement \texttt{(Sset \_s (Econst\_int Int.zero tint))} in local environment $le$ and memory $m$ produces new local environment $le'$ with \texttt{\_s} mapped to value $0$ and a {\bf normal} outcome. 
+   \[ 
+   \begin{split}
+le, m, \texttt{(Sset \_s (Econst\_int Int.zero tint))} \Rightarrow \\ le\{\_s = 0\}, m, \texttt{normal} 
+\end{split}
+\]
+
+   Statement \texttt{(Sreturn (Some (Etempvar \_s tint)))} evaluates to a {\bf return}(\texttt{s}) outcome and leaves $le$ and memory unchanged.
+     \[ le, m,\texttt{(Sreturn (Some (Etempvar \_s tint)))}  \Rightarrow le, m, \texttt{return}(\texttt{s}) \]
+    
 
 \end{frame}
 
