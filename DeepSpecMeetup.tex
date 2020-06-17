@@ -1,0 +1,845 @@
+\documentclass[10pt,usenames,dvipsnames,landscape]{beamer}
+\usepackage[landscape]{geometry}
+\usepackage{multicol}
+\usetheme[progressbar=frametitle]{metropolis}
+\usepackage{appendixnumberbeamer}
+\usepackage{anyfontsize}
+\usepackage{booktabs}
+\usepackage[scale=2]{ccicons}
+\usepackage{pgfplots}
+\usepgfplotslibrary{dateplot}
+\usepackage{graphicx}
+\usepackage{bussproofs}
+\usepackage{xspace}
+\usepackage[usenames,dvipsnames]{xcolor}
+
+\newcommand{\themename}{\textbf{\textsc{metropolis}}\xspace}
+
+\usepackage{listings}
+
+\lstset
+{ %Formatting for code in appendix
+    language=C,
+    numbers=left,
+    stepnumber=1,
+    basicstyle=\color{black}
+}
+
+
+\definecolor{diffstart}{named}{gray}
+\definecolor{diffincl}{named}{OliveGreen}
+\definecolor{diffrem}{named}{red}
+
+\lstdefinelanguage{diff}{
+    morecomment=[f][\color{diffstart}]{@@},
+    morecomment=[f][\color{diffincl}]{+},
+    morecomment=[f][\color{diffrem}]{-},
+  }
+
+\input{listings-coq}
+
+\title{Formal Verification of Computer Programs}
+\subtitle{A Primer. (part 1)}
+% \date{\today}
+\date{\date{}}
+\author[shortname]{Nika Pona \inst{2} \and Vadim Zaliva \inst{1}}
+\institute[shortinst]{\inst{1}Carnegie Mellon University \and \inst{2} Digamma.ai}
+
+% \titlegraphic{\hfill\includegraphics[height=1.5cm]{logo.pdf}}
+
+\begin{document}
+
+\maketitle
+
+
+\section{What are formal methods?}
+\begin{frame}{Formal verification}
+ 
+  We want to have high assurance that the code we wrote works as intended and is bug-free. One of the methods to do this is {\bf formal verification}, which amounts to producing {\it a formal proof} of correctness.
+
+  {\center What does it mean and how do we do it?}
+  
+  \begin{enumerate}
+  \item We write the \emph{specification} in {\it a formal language} which unambiguously defines how our program should behave.
+  \item Then we model our program and its actual behaviour, that is, we define the \emph{semantics} of our program. 
+  \item Finally we mathematically prove that the behaviour of our program matches the specification.
+\end{enumerate}
+
+In what follows we will talk about formal verfication of imperative programs using {\bf Coq proof assistant}.
+  
+\end{frame}
+
+\section{Verifying C code: a motivating example}
+
+\begin{frame}{\texttt{asn\_strtoimax\_lim} of ASN.1C compiler}
+  At \url{Digamma.ai} we are working on formal verification of existing {\bf imperative} programs using Coq. We took a function \texttt{asn\_strtoimax\_lim} from \texttt{asn1c} compiler to test our approach on a simple real-life example.
+  
+
+  Informal specification from the comments: 
+
+ \begin{quote}
+ Parse the number in the given string until the given *end position,
+ returning the position after the last parsed character back using the
+ same (*end) pointer.
+ WARNING: This behavior is different from the standard strtol/strtoimax(3).
+\end{quote}
+\end{frame}
+
+\begin{frame}{\texttt{asn\_strtoimax\_lim} code}
+  
+  {\fontsize{4}{1}\selectfont  \lstinputlisting[language=C]{asn_strtoimax_lim_old.c}}
+  
+\end{frame}
+
+
+\begin{frame}{Negative range bug example}
+
+When we go beyond allowed \textit{int} range, a wrong result is given for some inputs\footnote{Assume we are working on a 8-bit system and maximal signed int \texttt{MAX\_INT} is 127}:  
+
+\begin{table}[]
+    \centering
+    \begin{tabular}{l|l}
+input & \texttt{-128} \\
+intmax & \texttt{\ 127}\\
+upper boundary& \texttt{\ 12} \\
+last digit max& \texttt{\ 7}\\
+return & \color{green}\texttt{\ ASN\_STRTOX\_ERROR\_RANGE}\\
+\hline \\
+input & \texttt{-1281} \\
+intmax & \texttt{\ 127}\\
+upper boundary& \texttt{\ 12} \\
+last digit max& \texttt{\ 7}\\
+return & \color{red}\texttt{\ -127, ASN\_STRTOX\_OK}\\
+    \end{tabular}
+\end{table}
+
+\end{frame}
+
+\begin{frame}{Negative range bug}
+    This happens whenever the input string represents a number smaller than \texttt{MIN\_INT}, due to the fact that absolute value of \texttt{MIN\_INT} is greater than \texttt{MAX\_INT}, thus negative number cannot be treated as $\mathrm{value}\times\mathrm{sign}$ when $\mathrm{value}$ is represented as \textit{int}. 
+    
+    Formal proof has to cover all cases, hence this bug became obvious during the proof.
+    
+\end{frame}{}
+
+\begin{frame}{A bug uncovered during verification}
+
+  The bug (\href{https://github.com/vlm/asn1c/issues/344}{\#344}) was filed and promptly fixed by developers:
+  
+  {\fontsize{5}{2}\selectfont \lstinputlisting[language=diff]{bug1fix.diff}}
+
+\end{frame}
+
+\begin{frame}{\texttt{asn\_strtoimax\_lim} fixed}
+  
+    {\fontsize{6}{2}\selectfont \lstinputlisting[language=C]{asn_strtoimax_lim_part.c}}
+
+\end{frame}
+  
+\begin{frame}[fragile]{2nd bug uncovered in \emph{fixed} version}
+
+    Is this fix OK? Look at this part of the code: 
+    \vskip
+
+     \begin{lstlisting}[language=C]
+  if(str < *end) {
+    *end = str;
+    if(*str >= 0x30 && *str <= 0x39){
+      return ASN_STRTOX_ERROR_RANGE;
+    } else {
+      *intp = sign * value;
+      return ASN_STRTOX_EXTRA_DATA;
+    }
+  }
+  \end{lstlisting}
+  
+\end{frame}
+
+\begin{frame}{Memory store bug explained (1/3)}
+
+    Let minimal signed int \texttt{MIN\_INT} = $-4775808$ 
+
+    \texttt{*str} = {\color{red}2d 34 37 37 35 38 30 31 31 31} ( stands for ``-477580111'') 
+
+   {\bf Scenario 1}:
+
+    Assume that \texttt{*end = str + 9} and \texttt{end} $\geq$ $\texttt{str + 9}$.
+
+     {\color{red}2d 34 37 37 35 38 30 {\color{blue}$\overbrace{31}^{\texttt{str + 7}}$} 31 31 $\ldots$ $\overbrace{\texttt{X}}^{\texttt{end}}$}
+
+     Then at \texttt{str + 7} we store \texttt{*end = (str + 7)}
+
+     Let \texttt{str + 7 = 21 21 21 26} 
+
+     {\color{red}2d 34 37 37 35 38 30 31 {\color{blue} $\overbrace{31}^{\texttt{str + 8}}$} 31  $\ldots$ $\overbrace{\texttt{21 21 21 26}}^{\texttt{end}}$}
+     
+     And since at \texttt{str + 8} we read `1'
+     
+
+     
+     The output is  \color{green}\texttt{ASN\_ERROR\_RANGE}.
+
+
+  \end{frame}
+
+  \begin{frame}{Memory store bug explained (2/3)}
+
+    Let minimal signed int \texttt{MIN\_INT} = $-4775808$ 
+
+    \texttt{*str} = {\color{red}2d 34 37 37 35 38 30 31 31 31} (stands for ``-477580111'') 
+
+    {\bf Scenario 2}:
+
+    Assume that \texttt{*end = str + 9} and \texttt{end = str + 7}:
+    
+    {\color{red}2d 34 37 37 35 38 {\color{blue} $\overbrace{30 \; 31 \; 31 \; 31}^{\texttt{end}}$}}
+    
+
+    Then at \texttt{str + 7} we store \texttt{*end = str + 7}
+
+     Let \texttt{str + 7 = 21 21 21 26} 
+
+   
+    {\color{red}2d 34 37 37 35 38 30 {\color{blue}$\overbrace{21 \; 21 \; 21 \; 26}^{\texttt{end}}$}}
+    (stands for $``-477580!!!\&''$)
+
+    And since at \texttt{str + 8} we read `!' 
+
+    The output is \color{red}\texttt{ASN\_EXTRA\_DATA}.
+    
+    \end{frame}
+
+\begin{frame}{Memory store: A bug or an implicit restriction?}
+
+We have demonstrated that when the value of the \texttt{end} pointer is treated as a part of the input data, there is a bug where the resulting error value could be incorrect.
+
+On the other hand, it is hard to think of a legitimate use-case where the pointer would be a part the input data. Under such interpretation, there is an implicit pre-condition in the specification, mandating that:
+
+{\small
+\texttt{(*end < end) || (end + sizeof(const char *) <= str)}}
+
+\end{frame}
+
+\begin{frame}{Specification question}
+After addressing the two buges we discovered we were able to successfully verify that the function finally corresponds to the specification we wrote for. However, it was noticed the following behavior:
+
+For input \texttt{"a"} it returns {\color{green}\texttt{0,ASN\_STRTOX\_EXTRA\_DATA}}.
+
+Is it a bug or a feature?
+
+\end{frame}
+
+\begin{frame}{Lessons learned}
+
+This code was part of the library for 15 years. The library is covered by extensive unit and randomized tests. It is used in production by multiple users. Yet, the vulnerabilities are there and pose potential problems.
+
+\begin{enumerate}
+    \item The first bug is related to data type ranges and modulo integer arithmetic. These sort of problems are fairly common and require careful coding to be avoided. Formal verification enforces a strict mathematical model of all computer arithmetic and invariably exposes all such bugs.
+    \item The second problem was related to \textit{pointer aliasing}. These problems are not immediately obvious because C language does not allow us to enforce any memory aliasing restrictions (unlike, say Rust). In formal verification, there is a rigorous model to analyze such kind of problems called \textit{separation logic}.
+    \item The third issue shows us that your formal verification is only as good as your specification.
+\end{enumerate}
+
+\end{frame}
+
+\section{Coq mini-intro}
+
+\begin{frame}{Coq mini-intro}
+  We did our proofs in a formal language called {\it Gallina}, a mechanized version of {\bf Calculus of Inductive Constructions}, which is a very expressive type theory well studied in mathematical logic. We write the specifications, model our programs and do the proofs in this language.
+
+  \smallskip
+We could do all of the above on paper, but it would quickly get out of hand. Moreover, we want to be sure that there are no mistakes in the proofs. So we use a tool called {\bf proof assistant}: a program that checks that your proof is correct. It also provides an environment to make the construction of proofs easier. 
+
+In particular, we will talk about the Coq proof assistant: \includegraphics[width=1cm]{coq.png} \url{https://coq.inria.fr/}.
+
+\end{frame}
+
+\begin{frame}{What Coq does?}
+  In Coq you can:
+  \begin{itemize}
+  
+    \item define functions and predicates
+    \item state mathematical theorems and software specifications
+    \item interactively develop formal proofs of theorems
+    \item machine-check these proofs by a relatively small trusted kernel
+    \item extract certified programs to languages like OCaml, Haskell or Scheme.
+  \end{itemize}
+  
+\end{frame}
+
+
+
+\section{Verifying C code: a detailed example}
+
+\begin{frame}[fragile]{Factorial example}
+  One can mathematically specify factorial as a recursive equation, for ($0 \leq n$):\begin{align*}
+  fact(0) &= 1 \\
+  fact(n + 1) &= fact(n)*(n+1)    
+  \end{align*}
+  We can write it in Coq as a fixpoint definition:
+  \begin{lstlisting}[language=Coq]
+  Fixpoint fact (n : nat) : nat :=
+    match n with
+    | O => 1
+    | S n' => n * fact n'
+    end.
+  \end{lstlisting}
+  Note that this definition is also a functional program. This corresponds to the idea of verifying a program wrt reference implementation. The program evidently corresponds to our mathematical spec on paper, so we can use this approach here. But for more complex program we will want to write a specification in a more declarative fashion.
+ 
+\end{frame}
+
+\begin{frame}[fragile]{Factorial example}
+  We can also use an inductive definition of factorial. 
+  For ($0 \leq n$):\begin{align}
+  fact(0) &= 1 \\
+  \text{If } fact(n) = m \text{ then } fact(n + 1) &= m*(n+1)    
+  \end{align}
+  In Coq it corresponds to an inductive type or a predicate on natural numbers:
+  \begin{lstlisting}[language=Coq]
+  Inductive factorial : nat -> nat -> Prop :=
+  | FactZero : factorial 0 1
+  | FactSucc : forall n m, factorial n m -> factorial (S n) ((S n)*m).   
+  \end{lstlisting}
+Think of \texttt{FactZero} and \texttt{FactSucc} as axioms or rules that define what factorial is.
+
+\end{frame}
+
+\begin{frame}[fragile]{More declarative specs}
+  Another simple example: sorting. We can write an inductive spec as before:
+  \begin{lstlisting}[language=Coq]
+    Inductive sorted: list nat -> Prop :=
+    | sorted_nil: sorted nil
+    | sorted_1: forall x, sorted (x::nil)
+    | sorted_cons: forall x y l, x $\leq$ y -> sorted (y::l) -> sorted (x::y::l).  
+  \end{lstlisting}
+
+Alternatively:
+
+ \begin{lstlisting}[language=Coq]
+Definition sorted (al: list nat) :=
+ forall i j, i < j < length al -> al[i] $\leq$ al[j].
+  \end{lstlisting}
+
+Then we can go on and prove that your favorite sorting algorithm's output is \texttt{sorted}\footnote{and a permutation of the input}.
+
+\end{frame}
+
+\begin{frame}[fragile]{Factorial example: verifying a functional program}
+
+  We can write a tail-recursive functional program to compute factorial
+
+  \begin{lstlisting}[language=Coq]
+  Fixpoint fact_acc (n : nat) (acc : nat) :=
+    match n with
+    | 0 => acc
+    | S k => fact_acc k (n * acc)
+    end.
+
+  Definition fact' (n : nat) :=
+    fact_acc n 1.
+
+  \end{lstlisting}
+
+  Now we want to show that it actually computes factorial. To do this we can show in Coq that:
+   \begin{lstlisting}[language=Coq]
+  Theorem fact'_correct : forall n, fact' n = fact n.
+  \end{lstlisting}
+
+    \begin{lstlisting}[language=Coq]
+  Theorem fact'_correct_R : forall n, factorial n (fact' n).
+  \end{lstlisting}
+   
+\end{frame}
+
+\begin{frame}{Factorial example: verifying a functional program}
+  Now using Coq's extraction mechanism we can automatically extract an OCaml or Haskell function that is provably correct.
+
+  Alternatively, one could easily embed a functional language into Coq and reason about the existing implementation in a similar fashion.
+
+  But what if you want to verify code written in imperative language? Things get \emph{slightly} more complicated.
+\end{frame}
+
+
+\begin{frame}{Factorial example: verifying a C program}
+
+    To be able to state theorems about C programs in Coq we need to somehow represent C functions in Coq. This means  to model C syntax (as abstract syntax trees) and semantics (execution of programs) in Coq\footnote{For formalization of C semantics see \cite{Blazy09mechanizedsemantics}}.
+
+    Luckily, this has already been done in the project called CompCert.
+    \end{frame}
+    
+    \begin{frame}{CompCert}
+    CompCert is a verified compiler for C, almost entirely written in Coq and proved to work according to its specification (\url{http://compcert.inria.fr/}).
+
+    \begin{quote}
+      The striking thing about our CompCert results is that the middle-end bugs we found in all other compilers are absent. As of early 2011,the under-development version of CompCert is the only compiler we have tested for which Csmith cannot find wrong-code errors.
+    \end{quote} ({\it Finding and Understanding Bugs in C Compilers}, Yang et al., 2011)
+
+\end{frame}
+    
+\begin{frame}{Verifying imperative programs}
+    We use CompCert and use the following approach to verifying C programs:
+  \begin{itemize}
+  \item Parse C code into a Coq abstract syntax tree using C light\footnote{C light is a subset of C} generator of CompCert
+  \item Write a functional specification in Coq, using CompCert's memory model and integer representations
+  \item Prove properties about the generated AST  using semantics of C (light) defined in CompCert
+\end{itemize}
+\end{frame}
+
+\begin{frame}{Unsupported features in C light}
+  \begin{itemize}
+  \item \texttt{extern} declaration of arrays
+\item structs and unions cannot be passed by value
+\item  type qualifiers (\texttt{const}, \texttt{volatile}, \texttt{restrict}) are erased at parsing
+\item within expressions no side-effects nor function calls (meaning all C light expressions always terminate and are pure)
+\item statements: in \texttt{for(s1, a, s2)} s1 and s2 are statements, that do not terminate by break
+\item \texttt{extern} functions are only declared and not defined, used to model system calls
+\end{itemize}
+  
+  \end{frame}
+
+
+\begin{frame}[fragile]{Factorial example: verifying a C program}
+
+ Factorial C implementation that we want to verify
+
+\begin{lstlisting}[language=C]
+unsigned int factorial (unsigned int input) {
+  unsigned int output = 1;
+  while (input) {
+      output = output*input ;
+      input = input - 1 ;
+    } 
+  return output ;
+}
+
+\end{lstlisting}
+
+The specification stays the same.
+
+\end{frame}
+
+\begin{frame}[fragile]{ Syntax of C programs in Coq}
+Our C function can be represented in Coq as an abstract syntax tree:
+  \begin{lstlisting}[language=Coq]
+(Ssequence
+  (* int output = 1 *)
+  (Sset _output (Econst_int (Int.repr 1) tuint)) 
+  (Ssequence 
+    (* while (input) *)
+    (Swhile (Etempvar _input tuint) 
+      (Ssequence  
+      (* output = output*input *)
+        (Sset _output
+          (Ebinop Omul (Etempvar _output tuint) 
+          (Etempvar _input tuint) tuint)) 
+          (* input = input - 1 *)
+         (Sset _input (Ebinop Osub (Etempvar _input tuint) 
+                     (Econst_int (Int.repr 1) tuint) tuint))))
+            (* return output *)
+            (Sreturn (Some (Etempvar _output tuint))))).
+          
+     \end{lstlisting}
+     
+\end{frame}
+
+
+\begin{frame}[fragile]{Clight Expressions: Examples}
+  
+  Expressions are annotated with types: 
+  
+  \begin{lstlisting}[language=Coq]
+    (* constant 0 of type int *)
+    (* 0 *)
+    (Econst_int (Int.repr 0) tint) 
+     
+    (* binary operration add applied to constants 0 and 1 *)
+    (* 0 + 1 *)
+    (Ebinop Oadd (Econst_int (Int.repr 0) tint)
+    (Econst_int (Int.repr 1) tint) (tint))
+    
+    (* temporary variable of integer pointer type *)
+    (* int *p *)
+    (Etempvar _p (tptr tint)) 
+    
+    (* dereferencing integer pointer *)
+    (* (*p) *)
+    (Ederef (Etempvar _p (tptr tint)) tint)
+
+
+  \end{lstlisting}
+  
+\end{frame}
+
+\begin{frame}[fragile]{Clight Statements: Examples}
+
+  \begin{lstlisting}[language=Coq]
+      (* int s = 1 *)
+      (Sset _s (Econst_int (Int.repr 1) tint))
+
+      (* return s *)
+      (Sreturn (Some (Etempvar _s tint)))
+      
+      (* int s = 1 ;
+         int t = 0 ; *)
+      (Ssequence 
+        (Sset _s (Econst_int (Int.repr 1) tint))
+        (Sset _t (Econst_int (Int.repr 0) tint)))
+       
+      (* while (s) { s = s - 1 } *)
+      (Swhile (Etempvar _s tint) 
+      (Sset _s (Ebinop Osub (Etempvar _input tint)
+                (Econst_int (Int.repr 1) tint) tint))))
+
+
+  \end{lstlisting}
+  
+
+
+\end{frame}
+
+\subsection{Semantics of C programs in Coq}
+
+\begin{frame}{Operational Semantics}
+    Our goal is to prove that programs written in Clight behave as intended. To do this we need to formalize the notion of meaning of a C program. We do this using {\bf operational semantics}.
+
+    \bigskip
+    
+    An operational semantics is a mathematical model of programming language execution. It is basically an interpreter defined formally.
+    \bigskip
+    
+    We use big-step operational semantics used for all intermediate languages of CompCert.
+  \end{frame}
+  
+  \begin{frame}[fragile]{Operational Semantics}
+    The idea is to assign primitive values to constants and then compositionally compute values of expressions and results of execution of statements. 
+    
+    The evaluation of expressions and execution of statements is done in the context of global and local environments and memory state.
+   \begin{itemize}
+   %\item Each syntactic element is related to the intended result of executing this element (new local environment, memory, outcome or value).
+    
+    \item Expressions are mapped to memory locations or values (integers, bool etc).
+    \item The execution of statements produces {\bf outcomes} (break, normal, return), an updated memory and local environment. 
+   \end{itemize}
+
+   
+
+\end{frame}
+
+
+\begin{frame}[t,fragile]{CompCert Integers}
+
+  Machine integers modulo $2^N$ are defined as a module type in \url{CompCert/lib/Integers.v}. $8, 32, 64$-bit integers are supported, as well as 32 and 64-bit pointer offsets.\\
+  
+\bigskip
+
+A machine integer (type \texttt{int}) is represented as a Coq arbitrary-precision
+integer (type \texttt{Z}) plus a proof that it is in the range 0 (included) to
+modulus (excluded).
+
+
+\begin{lstlisting}[language=Coq]
+Record int: Type :=
+      {| intval: Z;
+         intrange: -1 < intval < modulus |}.
+\end{lstlisting}
+
+\end{frame}
+  
+
+   
+\begin{frame}{C memory model}
+   In order to verify a program written in C, one has to have a good model of variable environments, integer and pointer arithmetic and memory model. 
+   
+    A {\bf memory model} is a specification of memory states and operations over memory.
+    
+    In CompCert, memory states are accessed by addresses, pairs of a block
+  identifier $b$ and a byte offset $ofs$ within that block.
+  Each address is associated to permissions ranging from allowing all operations (read, write etc.) to allowing no operation.
+\end{frame}
+
+
+\begin{frame}{C memory model}
+  The type \texttt{mem} of memory states has  the following 4 basic operations over memory states:
+  \bigskip
+\begin{description}
+\item [load]: read memory at a given address;
+\item [store]: store memory at a given address;
+\item [alloc]: allocate a fresh memory block;
+\item [free]: invalidate a memory block.
+\end{description}
+These operations are to satisfy some basic properties like:  \texttt{load} succeeds if and only if the access is valid for reading; the value returned by \texttt{load} belongs to the type of the memory quantity accessed etc. 
+
+\end{frame}
+
+\begin{frame}{Examples}
+     Expression  \texttt{(Econst\_int Int.zero tint)}   is evaluated to value \texttt{0} in any local environment and memory. 
+      \[ le, m , \texttt{(Econst\_int Int.zero tint)} \Rightarrow 0, le, m \]
+
+   Evaluation of statement \texttt{(Sset \_s (Econst\_int Int.zero tint))} in local environment $le$ and memory $m$ produces new local environment $le'$ with \texttt{\_s} mapped to value $0$ and a {\bf normal} outcome. 
+   \[ 
+   \begin{split}
+le, m, \texttt{(Sset \_s (Econst\_int Int.zero tint))} \Rightarrow \\ le\{\_s = 0\}, m, \texttt{normal} 
+\end{split}
+\]
+
+   Statement \texttt{(Sreturn (Some (Etempvar \_s tint)))} evaluates to a {\bf return}(\texttt{s}) outcome and leaves $le$ and memory unchanged.
+     \[ le, m,\texttt{(Sreturn (Some (Etempvar \_s tint)))}  \Rightarrow le, m, \texttt{return}(\texttt{s}) \]
+    
+
+\end{frame}
+
+ \begin{frame}{Correctness statement}
+    Now we can state the correctness theorem for factorial:
+    
+    
+   \begin{quote}
+     For any memory $m$ and local environments $le$ with variables $\texttt{input}$ assigned $n$ in $le$, execution of $\texttt{f\_factorial}$ terminates and returns $fact(n)$ with resulting memory $m' = m$.
+   \end{quote}
+   
+   \begin{theorem} $\forall le \; m,$ 
+    
+    $le\{\texttt{input = n}\} \rightarrow $
+    
+    $\exists le', le, m, \texttt{factorial} \Rightarrow  le', m,  {\bf return}(\texttt{fact n}) $
+    
+    \end{theorem}
+
+   Hence we proved that factorial works correctly on all inputs\footnote{For simplicity, here we also assume that (fact n) doesn't overflow}. Similarly we state and prove \texttt{asn\_strtoimax\_lim} correctness. 
+      
+      \end{frame}
+    
+
+\begin{frame}{Verified Software Toolchain}
+    
+    We can also do the correctness proof using {\emph separation logic} defined on top of CompCert's operational semantics using Verified Software Toolchain (VST, \url{https://github.com/PrincetonUniversity/VST}). Let's go back to the \texttt{asn\_strtoimax\_lim} example.
+    
+    
+\end{frame}
+
+\begin{frame}{Separation Logic}
+
+Given propositions $P$, $Q$ and a statement $c$, a separation logic triple $$P \{c\} Q$$ states that given the precondition $P$, the execution of the function $c$ terminates with the post-condition $Q$ being true. Separation logic is defined by giving rules for valid triples. Some simple rules:
+
+$$P \{x := a\} P(x := a)$$ 
+
+$$P \{\texttt{Sskip}\} P$$
+
+if $P \{\texttt{s1\}} P'$ and $P' \{\texttt{s2}\} Q$ for some $P'$, then $ P \{ \texttt{Ssequence s1 s2} \} Q$
+    
+\end{frame}
+
+\begin{frame}{VST specification}
+
+To show C implementation correctness wrt the executable spec we prove a separation logic triple 
+
+$$P \{c\} Q$$
+
+that given the precondition $P$, the execution of the C light function $c$ terminates with the post-condition $Q$ being true. The post-condition says that $c$ returns the value according to the executable spec. 
+
+    
+\end{frame}{}
+
+\begin{frame}[fragile]{VST spec, encoder pre- and post-condition}
+
+The memory specification uses spatial predicates \lstinline[language=Coq]{v <- p} (``at address p there is a value v"). %Change the arrow
+
+We can combine the predicates using the separating conjuction $*$: each such conjunct is true on a separate sub-heap of the memory, thus guaranteeing non-overlapping of pointers.
+
+The precondition relates the C types to the abstract types of Coq. 
+
+In the post-condition, we use the executable specification to state that the correct result is written in memory. 
+
+\end{frame}
+
+
+
+
+\begin{frame}[fragile]{\texttt{asn\_strtoimax\_lim}: functional specification (abstract)}
+\begin{lstlisting}[language=Coq, basicstyle=\fontsize{7}{8}\selectfont\ttfamily]
+Fixpoint Z_of_string_loop (s : list byte) (val : Z) (b : bool) := 
+    match s with 
+    | [] => val
+    | c :: tl => 
+      if is_digit c
+      then let val' := v * 10 + (Z_of_char c) in                           
+           Z_of_string_loop tl val' b
+      else val             
+    end.
+    
+Definition Z_of_string (s : list byte) := 
+      match s with 
+      | [] => None
+      | [c] => if is_sign c
+               then None
+               else Z_of_char c
+      | c :: tl => if (c = plus_char) 
+                   then Z_of_string_loop tl 0 
+                   else if (c = minus_char)
+                        then - Z_of_string_loop tl 0
+                        else Z_of_string_loop s 0                                                                    
+      end.   
+
+ \end{lstlisting}
+
+
+\end{frame}
+\begin{frame}[fragile]{\texttt{asn\_strtoimax\_lim}: relational specification (abstract)}
+\begin{lstlisting}[language=Coq, basicstyle=\fontsize{7}{8}\selectfont\ttfamily]
+ Inductive Z_of_string_R : list byte -> Z -> Prop :=
+  | ERROR_RANGE_R_plus : forall ls z c,
+    let z':= z * 10 + (Z_of_char c) in
+      0 <= z ->
+      Z_of_string_R ls z ->
+      z' > Int64.max_signed ->
+      Z_of_string_R (ls ++ [c]) z'
+      
+ | EXTRA_DATA_R : forall c ls z,
+      Z_of_string_R ls z ->
+      not is_digit c  -> 
+      Z_of_string_R (ls ++ [c]) z 
+
+  | OK_R_plus : forall ls ls' z i,
+      ls = plus_char::ls' ->
+      Z_of_string_R_plus ls' z  ->
+      Z_of_string_R ls z 
+
+  with Z_of_string_R_plus : bool -> list byte -> Z -> Prop :=
+  | OK_R_plus_0 : Z_of_string_R_plus [] 0                      
+                               
+  | OK_R_plus_S : forall ls z c,
+  let z':= z * 10 + (Z_of_char c) in    
+      Z_of_string_R_plus ls z ->
+      Int64.min_signed <= z' <= Int64.max_signed ->
+      Z_of_string_R_plus (ls ++ [c]) z'.
+       \end{lstlisting}
+
+\end{frame}
+
+\begin{frame}[fragile]{\texttt{asn\_strtoimax\_lim}: functional specification (with bounds and errors)}
+\begin{lstlisting}[language=Coq, basicstyle=\fontsize{7}{8}\selectfont\ttfamily]
+Fixpoint Z_of_string_loop (s : list byte) (val i : Z) (b : bool) := 
+    match s with 
+    | [] => {| OK; val; i |}
+    | c :: tl => 
+      if is_digit c
+      then let val' := if b then v * 10 + (Z_of_char c) 
+                            else v * 10 - (Z_of_char c) in 
+           if (Int64.min_signed <= val' <= Int64.max_signed) 
+           then Z_of_string_loop tl val' (i + 1) b
+           else {| ERROR_RANGE; val'; i; |}      
+      else {| EXTRA_DATA; val; i; |}              
+    end.
+    
+Definition Z_of_string (s : list byte) := 
+      match s with 
+      | [] => {| ERROR_INVAL; 0; 0 |} 
+      | [c] => if is_sign c
+               then {| EXPECT_MORE; 0; 1 |} 
+               else Z_of_string_loop s 0 0 true
+      | c :: tl => if (c = plus_char || c = minus_char) 
+                   then Z_of_string_loop tl 0 1 (bool_of_sign c)
+                   else Z_of_string_loop s 0 0 true
+      end.    
+
+ \end{lstlisting}
+
+
+\end{frame}
+
+
+
+\begin{frame}[fragile]{\texttt{asn\_strtoimax\_lim}: VST precondition}
+\begin{lstlisting}[language=Coq]
+Definition asn_strtoimax_lim_vst_spec : ident * $\texttt{fun}$spec :=
+WITH ls : list byte, strp endp intp endp': val
+PRE [tptr tschar, tptr (tptr tschar), tptr tlong]
+    PROP (readable_share r;
+          writable_share wr;
+          0 <= str + |ls| < Ptrofs.max)
+    LOCAL (temp _str strp;    
+           temp _end endp; 
+           temp _intp intp)            
+    SEP (data_at r (tarray tschar |ls|) ls strp; 
+         data_at r (tptr tschar) endp' endp ;
+         data_at_ wr (tint) intp) 
+\end{lstlisting}
+
+\end{frame}
+
+\begin{frame}[fragile]{\texttt{asn\_strtoimax\_lim}: VST post-condition}
+\begin{lstlisting}[language=Coq]
+POST [tint]
+let r := res (Z_of_string ls) in
+let v := value (Z_of_string ls)  in
+let i := index (Z_of_string ls) in
+    PROP()
+    LOCAL (temp ret_temp r)
+    SEP(data_at r (tarray tschar |ls|) strp;          
+        match r with 
+          | OK | EXTRA_DATA => data_at wr (tlong) v intp 
+          | _ => data_at_ wr (tlong) intp
+        end;
+        if (strp < endp)
+        then data_at wr (tptr tschar) (strp + i) endp
+        else data_at wr (tptr tschar) endp' endp).
+\end{lstlisting}
+
+\end{frame}
+
+\begin{frame}[fragile]{VST proof}
+
+The proof is done using so-called \textit{forward simulation}. To prove $P \{c\} Q$:
+\begin{itemize}
+    \item start assuming the precondition $P$ 
+    \item sequentially execute statements of the function $c$
+    \item each statement generates a post-condition that follows form its execution
+    \item after executing the last statement of $c$, prove that the post-condition $Q$ holds. 
+\end{itemize}{}
+
+VST provides tactics to do most of these steps automatically. One has to provide joint postconditions for if statements and loop invariant for the loop
+    
+\end{frame}
+  
+    
+    \begin{frame}<0>
+      To see the proof and more examples go to factorial tutorial: \url{~/asn1verification/doc/tutorial/MiscExamples/factorial}
+    \end{frame}
+
+    \begin{frame}{Conclusion}
+
+      Coq can be used to prove correctness of imperative programs, as well as functional ones. However, the former requires an additional step of embedding C syntax and semantics in Coq. 
+      
+      So to prove an existing C function correct:
+      \begin{itemize}
+          \item  Write a formal specification of the function (based on informal spec, we had to use the comment and analysis of the function)
+          \item Then produce Clight AST of the function using Clight generator of CompCert
+          \item Prove that the resulting AST evaluates to correct values on all valid inputs using operational semantics or separation logic. 
+            \end{itemize}
+            
+      \end{frame}
+
+
+\begin{frame}{Questions?}
+
+Examples from this presentation: \\ {\small\url{https://github.com/digamma-ai/formal-verification-intro}}
+
+\vspace*{2\baselineskip}
+
+Contact: 
+\begin{itemize}
+    \item Vadim Zaliva, \includegraphics[height=\fontcharht\font`\B]{email.png}\ \href{mailto:vzaliva@cmu.edu}{vzaliva@cmu.edu}, \includegraphics[height=\fontcharht\font`\B]{Twitter_Social_Icon_Square_Color.png}\ \href{https://twitter.com/vzaliva}{@vzaliva}
+    \item Nika Pona, \includegraphics[height=\fontcharht\font`\B]{email.png}\ \href{mailto:npona@digamma.ai}{npona@digamma.ai}
+\end{itemize}
+
+
+
+
+\end{frame}
+    
+\begin{frame}[allowframebreaks]{References}
+
+  \bibliography{demo}
+  \bibliographystyle{apalike}
+
+\end{frame}
+
+\end{document}
